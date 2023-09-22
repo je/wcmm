@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>{{ wilderness.name }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.css">
+    <link rel="stylesheet" href="/s/a/m.min.css_">
+
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+    <link href='//fonts.googleapis.com/css?family=Fira+Sans' rel='stylesheet' type='text/css'>
+    <style>
+      #map { height: 560px; }
+      div {font-size: 0.6rem;}
+    </style>
+  </head>
+
+  <body>
+  <div id="wrap">
+    <div class="navbar navbar-inverse navbar-fixed-top pt-0 pb-1" style='background:DarkSlateGray' role="navigation">
+      <span class="navbar-header float-right py-0" style="color:white;">
+         <strong><styled id='right'>{{ wilderness.name }}</styled></strong>
+      </span>
+        <a class="float-right py-0" href="/wcm/"><strong><styled><span class="py-0" style="color:white;" id='left'>Wilderness Character Monitoring Measures</span></styled></strong></a>
+    </div>
+
+    <div class="container-fluid" style="">
+      <div class='row'>
+        <span class='col-lg-12 col-md-12 col-sm-12 col-xs-12 py-3'>
+          <small><strong class="text-muted">Background</strong></small>
+          <h6><strong>Wilderness Area and Surrounding Landscape</strong></h6>
+        </span>
+        <div class='col-lg-4 col-md-4 col-sm-4 col-xs-12 pb-4'>
+          <figure class="figure">
+            <a href='{{ slug }}-mapw-terrain-sf.png'><img class='img-fluid img-thumbnail rounded' alt='wilderness boundary map' src='{{ slug }}-mapw-terrain-sf.png'></a>
+            <figcaption class="figure-caption">This map shows the {{ wilderness.name }} boundary with USFS National Forests (in green) and State/County boundaries (in red) on a terrain basemap. Also available <a href='{{ slug }}-mapw-sf.png'>without terrain</a> and <a href='{{ slug }}-mapw-s.png'>without Forests</a>.
+            </figcaption>
+          </figure>
+        </div>
+        <div class='col-lg-4 col-md-4 col-sm-4 col-xs-12 pb-4'>
+          <figure class="figure">
+            <a href='{{ slug }}-map-sf.png'><img class='img-fluid img-thumbnail rounded' alt='wilderness boundary map with national forest and state/county boundaries' src='{{ slug }}-map-sf.png'></a>
+            <figcaption class="figure-caption">This map shows the location of the {{ wilderness.name }} boundary and USFS National Forests within the State. Also available <a href='{{ slug }}-map-s.png'>without Forests</a>.
+            </figcaption>
+          </figure>
+        </div>
+        <div class='col-lg-4 col-md-4 col-sm-4 col-xs-12 pb-4'>
+          <p>
+          The {{ io.w_ac|floatformat:"0" }} acre {{ wilderness.name }} was designated as a National Wilderness on or around {{ wilderness.year_designated }}, and Wilderness Character Monitoring baseline work was done in {{ wilderness.year_baseline }}. The maps in this section are made with USFS data, with terrain maps from the internet.
+          </p>
+          <p>
+          The map graphics here were produced on {{ wilderness.updated }} as part of the {{ wilderness.year_baseline }} baseline Wilderness Character Monitoring assessment.
+          </p>
+        </div>
+      </div>
+      <div class='row' style='background-color: gainsboro;'>
+        <span class='col-lg-12 col-md-12 col-sm-12 col-xs-12 py-3'>
+          <small><strong class="text-muted">Remoteness from Sights and Sounds of Human Activity Inside Wilderness</strong></small>
+          <h6><strong>Acres of Wilderness Away from Access and Travel Routes and Developments Inside Wilderness</strong></h6>
+        </span>
+        <div class='col-lg-8 col-md-8 col-sm-8 col-xs-12 pb-4'>
+          <figure class="figure">
+            <a href='{{ slug }}-rem-in-fin.png'><img class='img-fluid img-thumbnail rounded' alt='remoteness inside map' src='{{ slug }}-rem-in-fin.png'></a>
+            <figcaption class="figure-caption">Pink areas on this map represent portions of the wilderness over 1/2 mile from travel routes or other developments inside the wilderness. These {{ io.i_ac }} acre{{ io.i_ac|pluralize }} make up {{ io.i_pct }} percent of the {{ io.w_ac }} total wilderness acres.  Also available with <a href='{{ slug }}-rem-in-fin-base.png'>terrain basemap</a>, as <a href='{{ slug }}-rem-all-fin.png'>combined remoteness</a> (<a href='{{ slug }}-rem-all-fin-27in.png'>27 inch version</a>), as <a href='{{ slug }}-rem-all-fin-base.png'>combined remoteness with terrain basemap</a> (<a href='{{ slug }}-rem-all-fin-27in-base.png'>27 inch version</a>).</figcaption>
+            </figcaption>
+          </figure>
+        </div>
+        <div class='col-lg-4 col-md-4 col-sm-4 col-xs-12 pb-4'>
+          <p>
+          This measure assesses the total number of wilderness acres located more than 1/2 mile from access points, travel routes (authorized trails and roads, aircraft landing sites), and developments inside wilderness. Extent of visitation can have a negative impact on the capacity of a wilderness setting to allow for escape from the sights and sounds of human activity. Most wilderness use concentrates within a few miles of trailheads and access points, especially where day use makes up most of the visitation. Therefore, remote locations away from trails and structures within a wilderness provide opportunities for visitors to find solitude.
+          </p>
+          <p>
+          Route and development data is from current USFS enterprise data, and should be verified locally before inclusion in any analysis. Corrections to this map reflecting deletions and additions to these may be required in any given year.
+          </p>
+          <p>
+          Note that roads and developments located exactly on the wilderness boundary are included in the 'remoteness away from development outside wilderness' measure below. Spatial data resolution and accuracy can vary greatly across sources, and determining the intersection of a road represented by a single infinitely thin line can produce incorrect results. These should always be verified locally and corrected.
+          </p>
+          <p>
+          Once we have a reasonably accurate representation of developments around the wilderness, these are clipped to the wilderness boundary, buffered to half a mile, and these areas are subtracted from the total wilderness area.
+          </p>
+          <p>
+          The map graphic here was produced on {{ wilderness.updated }} as part of the {{ wilderness.year_baseline }} baseline Wilderness Character Monitoring assessment. This measure will be recalculated in {{ wilderness.year_baseline|add:5 }} and again every five years after to determine a trend.
+          </p>
+        </div>
+      </div>
+      <div class='row'>
+        <span class='col-lg-12 col-md-12 col-sm-12 col-xs-12 py-3'>
+          <small><strong class="text-muted">Remoteness from Sights and Sounds of Human Activity Outside the Wilderness</strong></small>
+          <h6><strong>Acres of Wilderness Away from Adjacent Travel Routes and Developments Outside the Wilderness</strong></h6>
+        </span>
+        <div class='col-lg-8 col-md-8 col-sm-8 col-xs-12 pb-4'>
+          <figure class="figure">
+            <a href='{{ slug }}-rem-out-fin.png'><img class='img-fluid img-thumbnail rounded' alt='remoteness outside map' src='{{ slug }}-rem-out-fin.png'></a>
+            <figcaption class="figure-caption">Blue areas on this map represent portions of the wilderness over 1/2 mile from travel routes or other developments outside the wilderness. These {{ io.o_ac }} acre{{ io.o_ac|pluralize }} make up {{ io.o_pct }} percent of {{ io.w_ac }} total wilderness acres.  Also available with <a href='{{ slug }}-rem-out-fin-base.png'>terrain basemap</a>, as <a href='{{ slug }}-rem-all-fin.png'>combined remoteness</a> (<a href='{{ slug }}-rem-all-fin-27in.png'>27 inch version</a>), as <a href='{{ slug }}-rem-all-fin-base.png'>combined remoteness with terrain basemap</a> (<a href='{{ slug }}-rem-all-fin-27in-base.png'>27 inch version</a>).
+            </figcaption>
+          </figure>
+        </div>
+        <div class='col-lg-4 col-md-4 col-sm-4 col-xs-12 pb-4'>
+          <p>
+          This measure assesses the total number of wilderness acres more than 1/2 mile from roads, structures, and other developments located outside a wilderness or on the boundary, including cherry-stemmed access road corridors and developed inholdings. Although legal protections and restrictions of wilderness do not extend to activities occurring outside a wilderness boundary, these activities can still degrade the wilderness experience. Signs of human activity and development outside wilderness manifest in many ways, including sounds from automobiles and off-highway vehicles on nearby travel routes, decreased visibility from air and light pollution, and visual evidence of increasing urbanization from high ridges and peaks.
+          </p>
+          <p>
+          Route and development data used in this analysis is from current USFS enterprise data, and should be verified locally before inclusion in any analysis. Corrections to this map reflecting deletions and additions to these may be required in any given year.
+          </p>
+          <p>
+          Note that roads and developments located exactly on the wilderness boundary are included in this measure. Spatial data resolution and accuracy can vary greatly across sources, and determining the intersection of a road represented by a single infinitely thin line can produce incorrect results. These should always be verified locally and corrected.
+          </p>
+          <p>
+          Once we have a reasonably accurate representation of developments around the wilderness, these are clipped to the wilderness boundary, buffered to half a mile, and these areas are subtracted from the total wilderness area.
+          </p>
+          <p>
+          The map graphic here was produced on {{ wilderness.updated }} as part of the {{ wilderness.year_baseline }} baseline Wilderness Character Monitoring assessment. This measure will be recalculated in {{ wilderness.year_baseline|add:5 }} and again every five years after to determine a trend.
+          </p>
+        </div>
+      </div>
+      <div class='row' style='background-color: gainsboro;'>
+        <span class='col-lg-12 col-md-12 col-sm-12 col-xs-12 py-3'>
+          <small><strong class="text-muted">Air and Water</strong></small>
+          <h6><strong>Total Deposition of Nitrogen</strong></h6>
+        </span>
+        <div class='col-lg-8 col-md-8 col-sm-8 col-xs-12 pb-4'>
+          <figure class="figure">
+            <a href='{{ slug }}-ntdep-graph.png'><img class='img-fluid img-thumbnail rounded' alt='nitrogen total deposition trend graph' src='{{ slug }}-ntdep-graph.png'></a>
+            <figcaption class="figure-caption">The red line on this graph illustrates a {% if ntdep.trend == 'no trend' %}flat{% else %}{{ ntdep.trend }}{% endif %} nitrogen total deposition trend (p={{ ntdep.p }}) through black markers showing the average annual ntdep values for the wilderness from {{ ntdep.yr_min }} to {{ ntdep.yr_max }}. The blue shaded area around the trend line is the confidence interval, and the blue dotted lines show the prediction interval.</figcaption>
+          </figure>
+          <figure class="figure">
+            <a href='{{ slug }}-ntdep-map-scaled.png'><img class='img-fluid img-thumbnail rounded' alt='nitrogen total deposition trend map' src='{{ slug }}-ntdep-map-scaled.png'></a>
+            <figcaption class="figure-caption">This map shows the clipped ntdep grid cells used in the analysis, shaded from dark red ('most upward' increasing trend) to dark green ('most downward' decreasing trend). Cells with grey shading have stable total nitrogen deposition.</figcaption>
+          </figure> 
+          {% if wetdep_n.wet_full %}
+          <figure class="figure">
+            <a href='{{ slug }}-wetdep-n.png'><img class='img-fluid img-thumbnail rounded' alt='nitrogen wet deposition trend graph' src='{{ slug }}-wetdep-n.png'></a>
+            <figcaption class="figure-caption">This graph illustrates nitrogen wet deposition trends from {{ wetdep_n.wet_full.yr_min }} to {{ wet_full.yr_max }} through black x marks showing the average annual concentration in the wilderness.</figcaption>
+          </figure>
+          {% else %}
+            <p>
+            This wilderness area had no adequate nitrogen wet deposition data available at the time of this analysis.
+            </p>
+          {% endif %}
+        </div>
+        <div class='col-lg-4 col-md-4 col-sm-4 col-xs-12 pb-4'>
+          <p>
+          Nitrogen oxides (NO<sub>X</sub>) are one of the major pollutants emitted into the atmosphere during the burning of fossil fuels. Agricultural activities, especially livestock management and fertilizer application to soils, are the primary source of ammonia (NH<sub>3</sub>) released to the atmosphere. These pollutants return to terrestrial and aquatic environments as atmospheric deposition of nitric acids and ammonium. These compounds can acidify soil and surface waters, which affects nutrient cycling, impacts the growth of vegetation, and causes the decline or death of aquatic insects and fish.
+          </p>
+          <p>
+          The best total nitrogen deposition values available in the lower 48 are the result of a hybrid approach that combines measured and modeled deposition into a continuous grid across the landscape. This approach combines monitoring data with output from the Community Multiscale Air Quality modeling system, giving priority to measurement data near the location of the monitor and priority to modeled data in areas where monitoring data are not available.
+          </p>
+          <p>
+          Annual averages for nitrogen total deposition are calculated by clipping the gridded ntdep data to the wilderness boundary, multiplying the total deposition value for each grid cell by its area inside the wilderness, summing ntdep for all cells, then dividing that sum by the total area of the wilderness. These annual averages are then used to determine nitrogen deposition trend inside the wilderness. Decreasing nitrogen deposition indicates an improvement in wilderness character.
+          </p>
+          <p>
+          <a href='{{ slug }}-ntdep.csv'>{{ slug }}-ntdep.<abbr title="comma-separated values">csv</abbr></a> has average annual nitrogen total deposition values in the wilderness for {{ ntdep.yr_min }} through {{ ntdep.yr_max }}.
+          </p>
+          <p>
+          In addition to total deposition, data for wet deposition of nitrogen is provided for some wilderness areas, primarily in the eastern side of the continent. Where available, wet deposition trends for each period from the initial year of monitoring plus five years and extended every five years to the current year are shown on the wet deposition trends graph in this section.
+          </p>
+          {% if wetdep_s.wet_full %}
+          <p>
+          Wet deposition data is available at this wilderness; <a href='{{ slug }}-wetdep-n.csv'>{{ slug }}-wetdep-n.<abbr title="comma-separated values">csv</abbr></a> lists the average annual wet deposition of nitrogen for each year since designation, along with the values for the total trend line.
+          </p>
+          {% endif %}
+          <p>
+          The nitrogen deposition trend here was done around {{ wilderness.updated }} as part of the {{ wilderness.year_baseline }} baseline Wilderness Character Monitoring assessment. This measure will be recalculated in {{ wilderness.year_baseline|add:5 }} and again every five years after to monitor changing trends.
+          </p>
+        </div>
+      </div>
+      <div class='row'>
+        <span class='col-lg-12 col-md-12 col-sm-12 col-xs-12 py-3'>
+          <small><strong class="text-muted">Air and Water</strong></small>
+          <h6><strong>Total Deposition of Sulfur</strong></h6>
+        </span>
+        <div class='col-lg-8 col-md-8 col-sm-8 col-xs-12 pb-4'>
+          <figure class="figure">
+            <a href='{{ slug }}-stdep-graph.png'><img class='img-fluid img-thumbnail rounded' alt='sulfur total deposition trend graph' src='{{ slug }}-stdep-graph.png'></a>
+            <figcaption class="figure-caption">The red line on this graph illustrates a {% if stdep.trend == 'no trend' %}flat{% else %}{{ stdep.trend }}{% endif %} nitrogen total deposition trend (p={{ stdep.p }}) through black markers showing the average annual stdep values for the wilderness from {{ stdep.yr_min }} to {{ stdep.yr_max }}. The blue shaded area around the trend line is the confidence interval, and the blue dotted lines show the prediction interval.</figcaption>
+          </figure>
+          <figure class="figure">
+            <a href='{{ slug }}-stdep-map-scaled.png'><img class='img-fluid img-thumbnail rounded' alt='sulfur total deposition trend map' src='{{ slug }}-stdep-map-scaled.png'></a>
+            <figcaption class="figure-caption">This map shows the clipped stdep grid cells used in the analysis, shaded from dark red ('most upward' increasing trend) to dark green ('most downward' decreasing trend). Cells with grey shading have stable total sulfur deposition.</figcaption>
+          </figure>
+          {% if wetdep_s.wet_full %}
+          <figure class="figure">
+            <a href='{{ slug }}-wetdep-s.png'><img class='img-fluid img-thumbnail rounded' alt='sulfur wet deposition trend graph' src='{{ slug }}-wetdep-s.png'></a>
+            <figcaption class="figure-caption">This graph illustrates sulfur wet deposition trends from {{ wetdep_n.wet_full.yr_min }} to {{ wet_full.yr_max }} through black x marks showing the average annual concentration in the wilderness.</figcaption>
+          </figure>
+          {% else %}
+            <p>
+            This wilderness area had no adequate sulfur wet deposition data available at the time of this analysis.
+            </p>
+          {% endif %}
+        </div>
+        <div class='col-lg-4 col-md-4 col-sm-4 col-xs-12 pb-4'>
+          <p>
+          Sulfur dioxide (SO<sub>2</sub>) is emitted during the burning of fossil fuels, especially coal, and can be transported long distances through the atmosphere before being deposited in the form of sulfuric acid. In sensitive ecosystems, sulfuric acid can contribute to acidification of soil and surface waters, affect nutrient cycling and impact the growth of vegetation, as well as lead to the decline and death of aquatic insects and fish. These effects have been more prevalent in the eastern United States due to historically high sulfur deposition levels. Although sulfur deposition has been declining and fish kills from acidification are now infrequent, sulfur bound and held in the soil continues to affect soil chemistry, soil buffering capacity, and the nutrient status of soils.
+          </p>
+          <p>
+          Eastern National Forests are likely to be more interested in using the sulfur deposition measure over the nitrogen measure because sulfur continues to exert a stronger influence on many ecosystems in the Eastern United States.
+          </p>
+          <p>
+          The best total sulfur deposition values available in the lower 48 are the result of a hybrid approach that combines measured and modeled deposition into a continuous grid across the landscape. This approach combines monitoring data with output from the Community Multiscale Air Quality modeling system, giving priority to measurement data near the location of the monitor and priority to modeled data in areas where monitoring data are not available.
+          </p>
+          <p>
+          Annual averages for sulfur total deposition are calculated by clipping the gridded stdep data to the wilderness boundary, multiplying the total deposition value for each grid cell by its area inside the wilderness, summing stdep for all cells, then dividing that sum by the total area of the wilderness. These annual averages are then used to determine sulfur deposition trend inside the wilderness. Decreasing sulfur deposition indicates an improvement in wilderness character.
+          </p>
+          <a href='{{ slug }}-stdep.csv'>{{ slug }}-stdep.<abbr title="comma-separated values">csv</abbr></a> has average annual sulfur total deposition values in the wilderness for {{ stdep.yr_min }} through {{ stdep.yr_max }}.
+          </p>
+          <p>
+          In addition to total deposition, data for wet deposition of sulfur is provided for some wilderness areas, primarily in the eastern side of the continent. Where available, wet deposition trends for each period from the initial year of monitoring plus five years and extended every five years to the current year are shown on the wet deposition trends graph in this section.
+          </p>
+          {% if wetdep_s.wet_full %}
+          <p>
+          Wet deposition data is available at this wilderness; <a href='{{ slug }}-wetdep-s.csv'>{{ slug }}-wetdep-s.<abbr title="comma-separated values">csv</abbr></a> lists the average annual wet deposition of sulfur for each year since designation, along with the values for the total trend line.
+          </p>
+          {% endif %}
+          <p>
+          The sulfur deposition trend here was done around {{ wilderness.updated }} as part of the {{ wilderness.year_baseline }} baseline Wilderness Character Monitoring assessment. This measure will be recalculated in {{ wilderness.year_baseline|add:5 }} and again every five years after to monitor changing trends.
+          </p>
+        </div>
+      </div>
+      <div class='row' style='background-color: gainsboro;'>
+        <span class='col-lg-12 col-md-12 col-sm-12 col-xs-12 py-3'>
+          <small><strong class="text-muted">Air and Water</strong></small>
+          <h6><strong>Concentration of Ambient Ozone</strong></h6>
+        </span>
+        <div class='col-lg-8 col-md-8 col-sm-8 col-xs-12 pb-4'>
+          <figure class="figure">
+            <a href='{{ slug }}-ozone-stations-13in.png'><img class='img-fluid img-thumbnail rounded' alt='ozone stations map' src='{{ slug }}-ozone-stations-13in.png'></a>
+            <figcaption class="figure-caption">This map shows location and period of record for ozone monitoring stations around the wilderness. Also available with <a href='{{ slug }}-ozone-stations-13in-base.png'>terrain basemap</a>, in <a href='{{ slug }}-ozone-stations-27in.png'>27 inch</a>, and <a href='{{ slug }}-ozone-stations-27in-base.png'>27 inch with terrain</a>.</figcaption>
+          </figure>
+          {% if ozone.trend_text or ozone.trend_text %}
+          <figure class="figure">
+            <a href='{{ slug }}-ozone-{{ ozone.site }}-graph.png'><img class='img-fluid img-thumbnail rounded' alt='ozone trend graph' src='{{ slug }}-ozone-{{ ozone.site }}-graph.png'></a>
+            <figcaption class="figure-caption">This graph illustrates a {% if ozone.trend_text == 'no trend' %}flat{% else %}{{ ozone.trend_text }}{% endif %} trend (p={{ ozone.p }}) through black x marks showing the 3-year rolling average of fourth highest daily maximum 8-hour ozone concentration at {{ ozone.site }} from {{ ozone.yr_min }} to {{ ozone.yr_max }}.</figcaption>
+          </figure>
+          {% else %}
+            <p>
+            This wilderness area had no adequate ozone data available at the time of this analysis.
+            </p>
+          {% endif %}
+        </div>
+        <div class='col-lg-4 col-md-4 col-sm-4 col-xs-12 pb-4'>
+          <p>
+          Ozone is a pollutant formed when emissions of nitrogen oxides (NO<sub>X</sub>) and volatile organic compounds react in the presence of sunlight. Burning of fossil fuels and industrial processes produce these pollutants, which can then travel long distances resulting in elevated ozone levels in wildernesses. Ozone is one of the most toxic air pollutants to plants and its effects include visible injury to leaves and needles, premature leaf loss, reduced photosynthesis, and reduced growth in sensitive plant species. Continued exposure of vegetation to ozone over time may also result in increased susceptibility to disease and damage from insects, as well as changes in species diversity and community structure.
+          </p>
+          <p>
+          This measure assesses the 3-year rolling average of ozone concentration (fourth highest daily maximum 8-hour concentration) based on annual analyses of national ozone monitoring data.
+          </p>
+          <p>
+          Monitoring data from sites located within 25 miles of a wilderness boundary are generally considered representative. Only ozone data from 1990 forward are considered valid for this measure, so the earliest 3-year moving average used for any wilderness should be 1992. Period of record otherwise begins at the year of wilderness designation. A wilderness designated in 2000, for example, would use data from 2000, and the first 3-year average would be from 2002. Not all ozone monitoring sites have legacy data dating from the year of designation, in which case the baseline trend uses the ozone data when monitoring began. 
+          </p>
+          <p>
+          A statistically significant decreasing trend in the 3-year rolling average of the fourth highest 8-hour ozone concentration results in an improving trend in the measure.
+          </p>
+          {% if ozone.trend_text or ozone.trend_text %}
+          <p>
+          The graph in this section shows the ozone trend at {{ ozone.site }}. <a href='{{ slug }}-ozone-{{ ozone.site }}.csv'>{{ slug }}-ozone-{{ ozone.site }}.<abbr title="comma-separated values">csv</abbr></a> lists the fourth highest 8-hour ozone concentration, the 3-year average, and the trend line for each year.
+          </p>
+          {% endif %}
+          <p>
+          The ozone concentration trend here was done around {{ wilderness.updated }} as part of the {{ wilderness.year_baseline }} baseline Wilderness Character Monitoring assessment. This measure will be recalculated in {{ wilderness.year_baseline|add:5 }} and again every five years after to monitor changing trends.
+          </p>
+        </div>
+      </div>
+      <div class='row'>
+        <span class='col-lg-12 col-md-12 col-sm-12 col-xs-12 py-3'>
+          <small><strong class="text-muted">Air and Water</strong></small>
+          <h6><strong>Amount of Haze</strong></h6>
+        </span>
+        <div class='col-lg-8 col-md-8 col-sm-8 col-xs-12 pb-4'>
+          {% with f=slug|length|add:12|stringformat:"s"|add:":" %}
+          <figure class="figure">
+            <a href='{{ slug }}-visibility-graph.png'><img class='img-fluid img-thumbnail rounded' alt='visibility trend graph' src='{{ slug }}-visibility-graph.png'></a>
+            <figcaption class="figure-caption">This graph illustrates a {% if vis.trend_text == 'no trend' %}flat{% else %}{{ vis.trend_text }}{% endif %} trend (p={{ vis.p }}) through black x marks showing average deciview for the 20 percent most impaired days at {{ vis_csv|slice:":-4"|slice:f }} from {{ vis.yr_min }} to {{ vis.yr_max }}.
+            </figcaption>
+          </figure>
+        </div>
+        <div class='col-lg-4 col-md-4 col-sm-4 col-xs-12 pb-4'>
+          <p>
+          Visual air quality (visibility) measurements provide a direct link between the concentration of pollutants in the atmosphere and degradation of the natural and physical condition of clean air in wilderness. Reduced visibility can affect local climate and photosynthetic activity, and directly affects many wildlife and insect species that depend on clear, clean air, including foraging raptors and pollinators.
+          </p>
+          <p>
+          Particles suspended in the atmosphere absorb and scatter light to cause regional haze, resulting in perceived light extinction which can be expressed in '<em>deciviews</em>'. This measure assesses the trend in average deciview for the 20 percent most impaired days, based on annual analyses of national visibility monitoring data. Deciview is a measurement of the amount of haze, with higher values of deciview indicating increased haze and greater levels of visibility impairment.
+          </p>
+          <p>
+          Data for this measure is from the IMPROVE station at {{ vis_csv|slice:":-4"|slice:f }}. A simple algorithm is used to identify the 20 percent of sample days each calendar year that are likely to be most affected by anthropogenic pollutants. The visibility conditions on these 20 percent 'most impaired' days are converted to deciview and averaged annually. Five year averages are then calculated using values from the current and previous four years of data.
+          </p>
+          <p>
+          <a href='{{ vis_csv }}'>{{ vis_csv|slice:":-4" }}.<abbr title="comma-separated values">csv</abbr></a> lists these 5-year average deciviews for each year, along with the deciview values for the trend line.
+          </p>
+          <p>
+          The haze trend here was done around {{ wilderness.updated }} as part of the {{ wilderness.year_baseline }} baseline Wilderness Character Monitoring assessment. This measure will be recalculated in {{ wilderness.year_baseline|add:5 }} and again every five years after to monitor changing trends.
+          </p>
+          {% endwith %}
+        </div>
+      </div>
+      <div class='row' style='background-color: gainsboro;'>
+        <span class='col-lg-12 col-md-12 col-sm-12 col-xs-12 py-3'>
+          <small><strong class="text-muted">Air and Water</strong></small>
+          <h6><strong>Index of Sensitive Lichen Species</strong></h6>
+        </span>
+        <div class='col-lg-8 col-md-8 col-sm-8 col-xs-12 pb-4'>
+        {% if lichen_n_tablem or lichen_s_tablem or lichen_plots %}
+          <figure class="figure">
+            <a href='{{ slug }}-lichen-plots.png'><img class='img-fluid img-thumbnail rounded' alt='lichen plots map' src='{{ slug }}-lichen-plots.png'></a>
+            <figcaption class="figure-caption">This map shows locations of lichen plots around the wilderness.</figcaption>
+          </figure>
+          {% if lichen_n.trend_text %}
+          <figure class="figure">
+            <a href='{{ slug }}-lichen-n-graph.png'><img class='img-fluid img-thumbnail rounded' alt='lichen nitrogen score trend graph' src='{{ slug }}-lichen-n-graph.png'></a>
+            <figcaption class="figure-caption">This graph illustrates a {% if lichen_n.trend_text == 'no trend' %}flat{% else %}{{ lichen_n.trend_text }}{% endif %} trend (p={{ lichen_n.p }}) through black x marks showing the average lichen air scores for nitrogen from {{ lichen_n.yr_min }} to {{ lichen_n.yr_max }}.</figcaption>
+          </figure>
+          {% endif %}
+          {% if lichen_n.trend_text or lichen_n_table %}
+          <p class="table-responsive">
+            <table class='table table-sm table-bordered table-striped'>
+              <caption><small>This table shows nitrogen air scores for lichen plots used in this analysis</small></caption>
+              <thead class='thead-dark'>
+                <tr>
+                <th colspan='5'>Air pollution scores: Nitrogen</th>
+                </tr>
+              </thead>
+              <tbody>
+              <tr>
+                <th>Plot number</th>
+                {%if lichen_n_tablem.1980 %}<th>1980-1989</th>{% endif %}
+                {%if lichen_n_tablem.1990 %}<th>1990-1999</th>{% endif %}
+                {%if lichen_n_tablem.2000 %}<th>2000-2009</th>{% endif %}
+                {%if lichen_n_tablem.2010 %}<th>2010-2019</th>{% endif %}
+              </tr>
+              {% for plot, attr in lichen_n_table.items %}<tr>
+                <td>{{ attr.PLOT }}</td>
+                {%if lichen_n_tablem.1980 %}<td>{{ attr.1980|floatformat:-4|default_if_none:"--" }}</td>{% endif %}
+                {%if lichen_n_tablem.1990 %}<td>{{ attr.1990|floatformat:-4|default_if_none:"--" }}</td>{% endif %}
+                {%if lichen_n_tablem.2000 %}<td>{{ attr.2000|floatformat:-4|default_if_none:"--" }}</td>{% endif %}
+                {%if lichen_n_tablem.2010 %}<td>{{ attr.2010|floatformat:-4|default_if_none:"--" }}</td>{% endif %}
+              </tr>{% endfor %}
+              <tr>
+                <td>Average</td>
+                {%if lichen_n_tablem.1980 %}<td>{{ lichen_n_tablem.1980|floatformat:-4 }}</td>{% endif %}
+                {%if lichen_n_tablem.1990 %}<td>{{ lichen_n_tablem.1990|floatformat:-4 }}</td>{% endif %}
+                {%if lichen_n_tablem.2000 %}<td>{{ lichen_n_tablem.2000|floatformat:-4 }}</td>{% endif %}
+                {%if lichen_n_tablem.2010 %}<td>{{ lichen_n_tablem.2010|floatformat:-4 }}</td>{% endif %}
+              </tr>
+              <tr class='table-warning'>
+                <td>p-value</td>
+                <td colspan='4' class='text-center'>{{ lichen_n.p|floatformat:-4 }}</td>
+              </tr>
+              </tbody>
+            </table>
+          </p>
+          {% endif %}
+          {% if lichen_s.trend_text %}
+          <figure class="figure">
+            <a href='{{ slug }}-lichen-s-graph.png'><img class='img-fluid img-thumbnail rounded' alt='lichen sulfur score trend graph' src='{{ slug }}-lichen-s-graph.png'></a>
+            <figcaption class="figure-caption">This graph illustrates a {% if lichen_s.trend_text == 'no trend' %}flat{% else %}{{ lichen_s.trend_text }}{% endif %} trend (p={{ lichen_s.p }}) through black x marks showing the average lichen air scores for sulfur from {{ lichen_s.yr_min }} to {{ lichen_s.yr_max }}.</figcaption>
+          </figure>
+          {% endif %}
+          {% if lichen_s.trend_text or lichen_s_table %}
+          <p class="table-responsive">
+            <table class='table table-sm table-bordered table-striped'>
+              <caption><small>This table shows sulfur air scores for lichen plots used in this analysis</small></caption>
+              <thead class='thead-dark'>
+                <tr>
+                <th colspan='5'>Air pollution scores: Sulfur</th>
+                </tr>
+              </thead>
+              <tbody>
+              <tr>
+                <th>Plot number</th>
+                {%if lichen_s_tablem.1980 %}<th>1980-1989</th>{% endif %}
+                {%if lichen_s_tablem.1990 %}<th>1990-1999</th>{% endif %}
+                {%if lichen_s_tablem.2000 %}<th>2000-2009</th>{% endif %}
+                {%if lichen_s_tablem.2010 %}<th>2010-2019</th>{% endif %}
+              </tr>
+              {% for plot, attr in lichen_s_table.items %}<tr>
+                <td>{{ attr.PLOT }}</td>
+                {%if lichen_s_tablem.1980 %}<td>{{ attr.1980|floatformat:-4|default_if_none:"--" }}</td>{% endif %}
+                {%if lichen_s_tablem.1990 %}<td>{{ attr.1990|floatformat:-4|default_if_none:"--" }}</td>{% endif %}
+                {%if lichen_s_tablem.2000 %}<td>{{ attr.2000|floatformat:-4|default_if_none:"--" }}</td>{% endif %}
+                {%if lichen_s_tablem.2010 %}<td>{{ attr.2010|floatformat:-4|default_if_none:"--" }}</td>{% endif %}
+              </tr>{% endfor %}
+              <tr>
+                <td>Average</td>
+                {%if lichen_s_tablem.1980 %}<td>{{ lichen_s_tablem.1980|floatformat:-4 }}</td>{% endif %}
+                {%if lichen_s_tablem.1990 %}<td>{{ lichen_s_tablem.1990|floatformat:-4 }}</td>{% endif %}
+                {%if lichen_s_tablem.2000 %}<td>{{ lichen_s_tablem.2000|floatformat:-4 }}</td>{% endif %}
+                {%if lichen_s_tablem.2010 %}<td>{{ lichen_s_tablem.2010|floatformat:-4 }}</td>{% endif %}
+              </tr>
+              <tr class='table-warning'>
+                <td>p-value</td>
+                <td colspan='4' class='text-center'>{{ lichen_s.p|floatformat:-4 }}</td>
+              </tr>
+              </tbody>
+            </table>
+          </p>
+          {% endif %}
+          {% if lichen_n.trend_text or lichen_s.trend_text %}
+          {% else %}
+          <p>
+          Data for plots around this wilderness area had too short a period of record for trend analysis.
+          </p>
+          {% endif %}
+        {% else %}
+          <p>
+          This wilderness area had no adequate lichen plot data available at the time of this analysis.
+          </p>
+        {% endif %}
+        </div>
+        <div class='col-lg-4 col-md-4 col-sm-4 col-xs-12 pb-4'>
+          <p>
+          Lichens are important contributors to critical ecosystem processes, such as nutrient cycling, and they provide food and nesting material for birds and other animals. Lichen communities that grow on trees (called '<em>epiphytic</em>' species) rely completely on atmospheric sources of nutrition, and are a well-known biological indicator of air pollution in forested ecosystems. The presence or absence of sensitive lichens over time indicates improving or degrading air quality.
+          </p>
+          <p>
+          This measure assesses the trend in air pollution scores for nitrogen and sulfur derived from the presence and abundance of sensitive lichen species, based on analyses of local biomonitoring data. Air pollution scores are calculated for each wilderness biomonitoring plot by surveying epiphytic lichen species with varying sensitivities to nitrogen and sulfur air pollution.
+          </p>
+          <p>
+          Once air scores for all plots are obtained, these are averaged across years. The earliest field collection date after the year of wilderness designation are compared to the most recent field collection date to complete this analysis. In instances where a wilderness has multiple sampling dates across a 10-year period, values from the earliest 10-year period can be compared with the most recent 10-year period.
+          </p>
+          {% if lichen_n.trend_text or lichen_s.trend_text %}
+          <p>
+          Tables and graphics in this section was produced on {{ wilderness.updated }} as part of the {{ wilderness.year_baseline }} baseline Wilderness Character Monitoring assessment. This measure will be recalculated in {{ wilderness.year_baseline|add:5 }} and again every five years after to determine a trend.
+          </p>
+          {% endif %}
+        </div>
+      </div>
+      <div class='row'>
+        <span class='col-lg-12 col-md-12 col-sm-12 col-xs-12 py-3'>
+          <small><strong class="text-muted">Air and Water</strong></small>
+          <h6><strong>Extent of Waterbodies with Impaired Water Quality</strong></h6>
+        </span>
+        <div class='col-lg-8 col-md-8 col-sm-8 col-xs-12 pb-4'>
+          <figure class="figure">
+            <a href='{{ slug }}-waters.png'><img class='img-fluid img-thumbnail rounded' alt='impaired waterbody map' src='{{ slug }}-waters.png'></a>
+            <figcaption class="figure-caption">This map shows the location of inventoried and impaired waterbodies in and around the wilderness. Of {{ iw.ln_assessed_miles }} miles of assessed streams inside the wilderness, {{ iw.ln_impaired_miles }} miles are impaired. Of {{ iw.pl_assessed_count }} assessed lakes inside the wilderness, {{ iw.pl_impaired_count }} are impaired. Also available with <a href='{{ slug }}-waters-base.png'>terrain basemap</a>, showing <a href='{{ slug }}-streams.png'>streams alone</a>, showing <a href='{{ slug }}-streams-base.png'>streams alone with terrain basemap</a>, showing <a href='{{ slug }}-lakes.png'>lakes alone</a>, and <a href='{{ slug }}-lakes-base.png'>lakes alone with terrain basemap</a>.</figcaption>
+          </figure>
+        </div>
+        <div class='col-lg-4 col-md-4 col-sm-4 col-xs-12 pb-4'>
+          <p>
+          This measure assesses the miles of streams or number of lakes inside wilderness with impaired water quality, based on national or state 303(d) list of impaired water bodies or local monitoring data. Water quality directly influences the health of plant and animal communities. While many headwater wilderness watersheds have good water quality, degradation from historical activities such as mining or from upstream developments outside a wilderness may impact water quality in wilderness.
+          </p>
+          <p>
+          <a href='{{ slug }}-ln_in_groups.csv'>{{ slug }}-ln_in_groups.<abbr title="comma-separated values">csv</abbr></a> lists each assessed stream in the wilderness along with its mileage inside the wilderness and impairment level.
+          </p>
+          <p>
+          <a href='{{ slug }}-pl_in_groups.csv'>{{ slug }}-pl_in_groups.<abbr title="comma-separated values">csv</abbr></a> lists each assessed lake in the wilderness along with its impairment level.
+          </p>
+          <p>
+          The impaired watershed map here was produced on {{ wilderness.updated }} as part of the {{ wilderness.year_baseline }} baseline Wilderness Character Monitoring assessment. Like other measures based on current spatial data, this measure will be recalculated in {{ wilderness.year_baseline|add:5 }} and again every five years after to determine a trend.          
+          </p>
+        </div>
+      </div>
+      <div class='row' style='background-color: gainsboro;'>
+        <span class='col-lg-12 col-md-12 col-sm-12 col-xs-12 py-3'>
+          <small><strong class="text-muted">Ecological Processes</strong></small>
+          <h6><strong>Watershed Condition Class</strong></h6>
+        </span>
+        <div class='col-lg-8 col-md-8 col-sm-8 col-xs-12 pb-4'>
+          <figure class="figure">
+            <a href='{{ slug }}-wcc.png'><img class='img-fluid img-thumbnail rounded' alt='watershed condition class map' src='{{ slug }}-wcc.png'></a>
+            <figcaption class="figure-caption">Of {{ wcc.w_ac }} acre{{ wcc.w_ac|pluralize }} in the wilderness, {{ wcc.ia_ac }} acre{{ wcc.ia_ac|pluralize }} ({{ wcc.ia_pct }}%) are 'Functioning properly', {{ wcc.ib_ac }} acre{{ wcc.ib_ac|pluralize }} ({{ wcc.ib_pct }}%) are 'Functioning at risk', and {{ wcc.ic_ac }} acre{{ wcc.ic_ac|pluralize }} ({{ wcc.ic_pct }}%) are 'Impaired function'. The above map graphic is also available with a <a href='{{ slug }}-wcc-base.png'>terrain basemap</a>.</figcaption>
+          </figure>
+        </div>
+        <div class='col-lg-4 col-md-4 col-sm-4 col-xs-12 pb-4'>
+          <p>
+          The Watershed Condition Class measure is intended to monitor changes in the watershed functions supporting aquatic ecosystems inside the wilderness. USFS Watershed Condition Class is derived from 12 different indicators -- water quality, water quantity, aquatic habitat, aquatic biota, roads and trails, soils, riparian/wetland vegetation, fire regime or wildfire, forest cover, rangeland vegetation, terrestrial invasive species, and forest health -- resulting in a single score describing watershed integrity for each watershed:
+          <ul>
+          <li>
+           Class 1: 'Functioning properly'
+          </li>
+          <li>
+            Class 2: 'Functioning at risk'
+          </li>
+          <li>
+            Class 3: 'Impaired function'
+          </li>
+          </ul>
+          Watershed condition classes for all watersheds in the wilderness area, along with total acres and percentages for each condition class, are shown on the map in this section.
+          </p>
+          <p>
+          <a href='{{ slug }}-wcc.csv'>{{ slug }}-wcc.<abbr title="comma-separated values">csv</abbr></a> lists each watershed in the wilderness along with its watershed condition class and the acres of that watershed falling inside the wilderness.
+          </p>
+          <p>
+          The watershed condition map here was produced on {{ wilderness.updated }} as part of the {{ wilderness.year_baseline }} baseline Wilderness Character Monitoring assessment. Like other measures based on current spatial data, this measure will be recalculated in {{ wilderness.year_baseline|add:5 }} and again every five years after to determine a trend.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  </body>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.0.3/leaflet.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.1.15/leaflet-providers.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/1.4.2/Control.FullScreen.min.js"></script>
+  <script type="text/javascript" src="/s/ltd/js/baselayers.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-groupedlayercontrol/0.6.1/leaflet.groupedlayercontrol.min.js"></script>
+  <script type="text/javascript">
+      $(document).ready(function() {
+          $.ajax('data.js', {dataType: 'script'})
+      });
+    </script>
+</html>

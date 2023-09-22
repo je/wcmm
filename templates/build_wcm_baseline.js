@@ -1,9 +1,3 @@
-var l = document.getElementById('left');
-l.innerHTML += 'Wilderness Character Monitoring Measures';
-
-var r = document.getElementById('right');
-r.innerHTML += '{{name}}';
-
 var map = L.map('map', {
     zoom: 7,
     preferCanvas: true,
@@ -21,7 +15,7 @@ var map = L.map('map', {
     zoomControl: true,
 });
 
-$.getJSON('/wcm/{{slug}}/{{slug}}.json.packed').done(addTopoData);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}.json.packed').done(addTopoData);
 
 L.TopoJSON = L.GeoJSON.extend({
   addData: function(jsonData) {    
@@ -60,7 +54,7 @@ function addTopoData(topoData){
     cFull.onAdd = function(map) {
         var div = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar leaflet-control');
         div.id += 'full-extent-btn';
-        div.innerHTML += '<a class="leaflet-control-zoom-home home-icon" href="#" title="Full extent" role="button" aria-label="Full extent"><span class=\'glyphicon glyphicon-bookmark small\'></span></a>';
+        div.innerHTML += '<a class="leaflet-control-zoom-home home-icon" href="#" title="Full extent" role="button" aria-label="Full extent"><span class=\'glyphicon glyphicon-bookmark small\'><img src="/s/icons-main/icons/bookmark-fill.svg" alt="" width="16" height="16"></span></a>';
         return div;
     };
     cFull.addTo(map);
@@ -71,12 +65,6 @@ function addTopoData(topoData){
     });
 }
 
-var frem = "<span class='' style='color:Black'><strong>Remoteness Downloads</strong></span><br><a href='{{slug}}-rem-in-fin.png'>inside remoteness map</a> <span class='pull-right'>with <a href='{{slug}}-rem-in-fin-base.png'>terrain</a></span><br><a href='{{slug}}-rem-out-fin.png'>outside remoteness map</a> <span class='pull-right'>with <a href='{{slug}}-rem-out-fin-base.png'>terrain</a></span><br><a href='{{slug}}-rem-all-fin.png'>combined remoteness map</a> <span class='pull-right'>with <a href='{{slug}}-rem-all-fin-base.png'>terrain</a></span><br><a href='{{slug}}-rem-all-fin-27in.png'>combined remoteness map 27\"</a> <span class='pull-right'>with <a href='{{slug}}-rem-all-fin-27in-base.png'>terrain</a></span>";
-
-var fair = "<span class='' style='color:Black'><strong>Air Quality Downloads</strong></span><br><a href='{{slug}}-ntdep.png'>nitrogen deposition trend map</a><br><a href='{{slug}}-ntdep-graph.png'>nitrogen deposition trend graph</a>{% if nt_ext %}<br><a href='{{nt_ext}}'>nitrogen deposition trend graph extended</a>{% endif %}<br><a href='{{slug}}-ntdep.csv'>nitorgen deposition trend csv</a><br><a href='{{slug}}-stdep.png'>sulfur deposition trend map</a><br><a href='{{slug}}-stdep-graph.png'>sulfur deposition trend graph</a>{% if st_ext %}<br><a href='{{st_ext}}'>sulfur deposition trend graph extended</a>{% endif %}<br><a href='{{slug}}-stdep.csv'>sulfur deposition trend csv</a>{% if vis_csv %}<br><a href='{{slug}}-visibility-graph.png'>visibility trend graph</a>{% endif %}{% if vis_ext %}<br><a href='{{vis_ext}}'>visibility trend graph extended</a>{% endif %}{% if vis_csv %}<br><a href='{{vis_csv}}'>visibility trend csv</a>{% endif %}</span>";
-
-var fwat = "<span class='' style='color:Black'><strong>Water Quality Downloads</strong><br><a href='{{slug}}-streams.png'>impaired streams map</a> <span class='pull-right'>with <a href='{{slug}}-streams-base.png'>terrain</a> and <a href='{{slug}}-streams-base-own.png'>usfs/blm ownership</a></span><br><a href='{{slug}}-streams.csv'>impaired streams csv</a><br><a href='{{slug}}-lakes.png'>impaired lakes map</a> <span class='pull-right'>with <a href='{{slug}}-lakes-base.png'>terrain</a> and <a href='{{slug}}-lakes-base-own.png'>usfs/blm ownership</a></span><br><a href='{{slug}}-lakes.csv'>impaired lakes csv</a><br><a href='{{slug}}-303d.png'>impaired waterbodies map</a> <span class='pull-right'>with <a href='{{slug}}-303d-base.png'>terrain</a> and <a href='{{slug}}-303d-base-own.png'>usfs/blm ownership</a></span><br><a href='{{slug}}-wcc.png'>watershed condition map</a> <span class='pull-right'>with <a href='{{slug}}-wcc-base.png'>terrain</a></span><br><a href='{{slug}}-wcc.csv'>watershed condition csv</a></span>";
-
 var pcs = {};
 pcs.ro = "<span class='small' style='color:Black'><strong>Remoteness from development outside wilderness</strong><br>{{ io.w_ac }} wilderness acres<br>{{ io.o_ac }} outroads acres ({{ io.o_pct }}%)</span>";
 pcs.ri = "<span class='small' style='color:Black'><strong>Remoteness from development inside wilderness</strong><br>{{ io.w_ac }} wilderness acres<br>{{ io.i_ac }} inroads acres ({{ io.i_pct }}%)</span>";
@@ -86,7 +74,7 @@ pcs.wspc = "<span class='small' style='color:Black'><strong>Impaired streams ins
 pcs.wlpc = "<span class='small' style='color:Black'><strong>Impaired lakes inside wilderness</strong><br>{{ iw.slakes }} impaired lakes<br>{{ iw.slakes2 }} inventoried lakes</span>";
 pcs.wcc = "<span class='small' style='color:Black'><strong>Watershed condition class</strong><br>{{ wcc.w_ac }} total wilderness acres<br>{{ wcc.ia_ac }} acres 'functioning properly' ({{ wcc.ia_pct }}%)<br>{{ wcc.ib_ac }} acres 'functioning at risk' ({{ wcc.ib_pct }}%)<br>{{ wcc.ic_ac }} acres 'impaired function' ({{ wcc.ic_pct }}%)" + "</span>";
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-rem-out-fin.json.packed').done(addRO);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-rem-out-fin.json.packed').done(addRO);
 
 function style_ro(feature) {
     return {
@@ -118,10 +106,10 @@ tro = new L.TopoJSON(null, {style: style_ro, onEachFeature: oneach_ro});
 
 function addRO(topoData){
     tro.addData(topoData);
-    tro.addTo(map);
+    //tro.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-rem-roadcore2-out.json.packed').done(addROr);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-rem-out-roadcore2-.json.packed').done(addROr);
 
 function style_ror(feature) {
     return {
@@ -153,7 +141,7 @@ function addROr(topoData){
     tror.addData(topoData);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-rem-devln-out.json.packed').done(addROdl);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-rem-out-devln.json.packed').done(addROdl);
 
 function style_rodl(feature) {
     return {
@@ -185,7 +173,7 @@ function addROdl(topoData){
     trodl.addData(topoData);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-rem-devpt-out.json.packed').done(addROdd);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-rem-out-devpt.json.packed').done(addROdd);
 
 function style_rodd(feature) {
     return {
@@ -228,7 +216,7 @@ function addROdd(topoData){
     trodd.addData(topoData);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-rem-devpl-out.json.packed').done(addROdp);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-rem-out-devpl.json.packed').done(addROdp);
 
 function style_rodp(feature) {
     return {
@@ -260,7 +248,7 @@ function addROdp(topoData){
     trodp.addData(topoData);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-rem-in-fin.json.packed').done(addRI);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-rem-in-fin.json.packed').done(addRI);
 
 function style_ri(feature) {
     return {
@@ -292,10 +280,10 @@ tri = new L.TopoJSON(null, {style: style_ri, onEachFeature: oneach_ri});
 
 function addRI(topoData){
     tri.addData(topoData);
-    tri.addTo(map);
+    //tri.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-rem-roadcore2-in.json.packed').done(addRIr);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-rem-in-roadcore2.json.packed').done(addRIr);
 
 function style_rir(feature) {
     return {
@@ -328,7 +316,7 @@ function addRIr(topoData){
     //trir.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-rem-devln-in.json.packed').done(addRIdl);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-rem-in-devln.json.packed').done(addRIdl);
 
 function style_ridl(feature) {
     return {
@@ -361,7 +349,7 @@ function addRIdl(topoData){
     //tridl.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-rem-devpt-in.json.packed').done(addRIdd);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-rem-in-devpt.json.packed').done(addRIdd);
 
 function style_ridd(feature) {
     return {
@@ -405,7 +393,7 @@ function addRIdd(topoData){
     //tridd.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-rem-devpl-in.json.packed').done(addRIdp);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-rem-in-devpl.json.packed').done(addRIdp);
 
 function style_ridp(feature) {
     return {
@@ -438,7 +426,7 @@ function addRIdp(topoData){
     //tridp.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-ntdep-grid.json.packed').done(addN);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-ntdep-grid.json.packed').done(addN);
 
 function oneach_ntdep(feature, layer) {
     if (feature.properties) {
@@ -470,7 +458,7 @@ tnt = new L.TopoJSON(null, {style: style_ntdep, onEachFeature: oneach_ntdep});
 
 function addN(topoData){
     tnt.addData(topoData);
-    tnt.addTo(map);
+    //tnt.addTo(map);
     var nmax = -999999999;
     var nmin = 999999999;
     var nm = null;
@@ -515,7 +503,7 @@ function addN(topoData){
     });
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-stdep-grid.json.packed').done(addS);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-stdep-grid.json.packed').done(addS);
 
 function oneach_stdep(feature, layer) {
     if (feature.properties) {
@@ -547,7 +535,7 @@ tst = new L.TopoJSON(null, {style: style_stdep, onEachFeature: oneach_stdep});
 
 function addS(topoData){
     tst.addData(topoData);
-    tst.addTo(map);
+    //tst.addTo(map);
     var smax = -999999999;
     var smin = 999999999;
     var sm = null;
@@ -592,7 +580,7 @@ function addS(topoData){
     });
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-streams.json.packed').done(addWis);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-streams.json.packed').done(addWis);
 
 function style_wis(feature) {
     return {
@@ -624,10 +612,10 @@ twis = new L.TopoJSON(null, {style: style_wis, onEachFeature: oneach_wis});
 
 function addWis(topoData){
     twis.addData(topoData);
-    twis.addTo(map);
+    //twis.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-streams-around.json.packed').done(addWisf);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-streams-around.json.packed').done(addWisf);
 
 function style_wisf(feature) {
     return {
@@ -662,7 +650,7 @@ function addWisf(topoData){
     //twisf.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-streamsb.json.packed').done(addWsb);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-streamsb.json.packed').done(addWsb);
 
 function style_wsb(feature) {
     return {
@@ -697,7 +685,7 @@ function addWsb(topoData){
     //twsb.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-streamsb-around.json.packed').done(addWsba);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-streamsb-around.json.packed').done(addWsba);
 
 function style_wsba(feature) {
     return {
@@ -732,7 +720,7 @@ function addWsba(topoData){
     //twsba.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-lakes.json.packed').done(addWil);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-lakes.json.packed').done(addWil);
 
 function style_wil(feature) {
     return {
@@ -764,10 +752,10 @@ twil = new L.TopoJSON(null, {style: style_wil, onEachFeature: oneach_wil});
 
 function addWil(topoData){
     twil.addData(topoData);
-    twil.addTo(map);
+    //twil.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-lakes-around.json.packed').done(addWilf);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-lakes-around.json.packed').done(addWilf);
 
 function style_wilf(feature) {
     return {
@@ -802,7 +790,7 @@ function addWilf(topoData){
     //twilf.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-lakesb.json.packed').done(addWlb);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-lakesb.json.packed').done(addWlb);
 
 function style_wlb(feature) {
     return {
@@ -837,7 +825,7 @@ function addWlb(topoData){
     //twlb.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-lakesb-around.json.packed').done(addWlba);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-lakesb-around.json.packed').done(addWlba);
 
 function style_wlba(feature) {
     return {
@@ -872,7 +860,7 @@ function addWlba(topoData){
     //twlba.addTo(map);
 }
 
-$.getJSON('/wcm/{{slug}}/{{slug}}-wcc.json.packed').done(addWcc);
+$.getJSON('/wcm/{{slug}}/map/{{slug}}-wcc.json.packed').done(addWcc);
 
 function gCwcc(d) {
     return d === 'Functioning Properly' ? 'Green' :
@@ -911,37 +899,37 @@ twcc = new L.TopoJSON(null, {style: style_wcc, onEachFeature: oneach_wcc});
 
 function addWcc(topoData){
     twcc.addData(topoData);
-    twcc.addTo(map);
+    //twcc.addTo(map);
 }
 
 var olsr = {
-    "<i class='glyphicon glyphicon-stop' style='color:cyan'></i> Remoteness from outside development": tro,
-    "<i class='glyphicon glyphicon-minus' style='color:grey'></i> roadcore2 outside wilderness": tror,
-    "<i class='glyphicon glyphicon-minus' style='color:grey'></i> dev_ln outside wilderness": trodl,
-    "<i class='glyphicon glyphicon-minus' style='color:grey'></i> dev_pt outside wilderness": trodd,
-    "<i class='glyphicon glyphicon-minus' style='color:grey'></i> dev_pl outside wilderness": trodp,
-    "<i class='glyphicon glyphicon-stop' style='color:hotpink'></i> Remoteness from inside development": tri,
-    "<i class='glyphicon glyphicon-minus' style='color:grey'></i> roadcore2 inside wilderness": trir,
-    "<i class='glyphicon glyphicon-minus' style='color:grey'></i> dev_ln inside wilderness": tridl,
-    "<i class='glyphicon glyphicon-minus' style='color:grey'></i> dev_pt inside wilderness": tridd,
-    "<i class='glyphicon glyphicon-minus' style='color:grey'></i> dev_pl inside wilderness": tridp,
+    "<i class='glyphicon glyphicon-stop' style='color:cyan'><img src='/s/icons-main/icons/intersect.svg' fill='cyan' alt='' width='16' height='16'></i> <strong>Remoteness from outside development</strong>": tro,
+    "<i class='glyphicon glyphicon-minus' style='color:grey'><img src='/s/icons-main/icons/slash.svg' fill='grey' alt='' width='16' height='16'></i> roadcore2 outside wilderness": tror,
+    "<i class='glyphicon glyphicon-minus' style='color:grey'><img src='/s/icons-main/icons/slash.svg' fill='grey' alt='' width='16' height='16'></i> dev_ln outside wilderness": trodl,
+    "<i class='glyphicon glyphicon-minus' style='color:grey'><img src='/s/icons-main/icons/dot.svg' fill='grey' alt='' width='16' height='16'></i> dev_pt outside wilderness": trodd,
+    "<i class='glyphicon glyphicon-minus' style='color:grey'><img src='/s/icons-main/icons/stop-fill.svg' fill='grey' alt='' width='16' height='16'></i> dev_pl outside wilderness": trodp,
+    "<i class='glyphicon glyphicon-stop' style='color:hotpink'><img src='/s/icons-main/icons/intersect.svg' fill='hotpink' alt='' width='16' height='16'></i> <strong>Remoteness from inside development</strong>": tri,
+    "<i class='glyphicon glyphicon-minus' style='color:grey'><img src='/s/icons-main/icons/slash.svg' fill='grey' alt='' width='16' height='16'></i> roadcore2 inside wilderness": trir,
+    "<i class='glyphicon glyphicon-minus' style='color:grey'><img src='/s/icons-main/icons/slash.svg' fill='grey' alt='' width='16' height='16'></i> dev_ln inside wilderness": tridl,
+    "<i class='glyphicon glyphicon-minus' style='color:grey'><img src='/s/icons-main/icons/dot.svg' fill='grey' alt='' width='16' height='16'></i> dev_pt inside wilderness": tridd,
+    "<i class='glyphicon glyphicon-minus' style='color:grey'><img src='/s/icons-main/icons/stop-fill.svg' fill='grey' alt='' width='16' height='16'></i> dev_pl inside wilderness": tridp,
 };
 
 var olsn = {
-    "<i class='glyphicon glyphicon-stop' style='color:#00224e'></i><i class='glyphicon glyphicon-stop' style='color:#7d7c78'></i><i class='glyphicon glyphicon-stop' style='color:#fee838'></i> Nitrogen total deposition trend": tnt,
-    "<i class='glyphicon glyphicon-stop' style='color:#00224e'></i><i class='glyphicon glyphicon-stop' style='color:#7d7c78'></i><i class='glyphicon glyphicon-stop' style='color:#fee838'></i> Sulfur total deposition trend": tst,
+    "<i class='glyphicon glyphicon-stop' style='color:#00224e'><img src='/s/icons-main/icons/grid-3x3.svg' fill='orange' alt='' width='16' height='16'></i> <strong>Nitrogen total deposition trend</strong>": tnt,
+    "<i class='glyphicon glyphicon-stop' style='color:#00224e'><img src='/s/icons-main/icons/grid-3x3.svg' fill='orange' alt='' width='16' height='16'></i> <strong>Sulfur total deposition trend</strong>": tst,
 };
 
 var olsw = {
-    "<i class='glyphicon glyphicon-minus' style='color:red'></i> Impaired streams inside wilderness": twis,
-    "<i class='glyphicon glyphicon-minus' style='color:red'></i> impaired streams near wilderness": twisf,
-    "<i class='glyphicon glyphicon-minus' style='color:blue'></i> inventoried streams inside wilderness": twsb,
-    "<i class='glyphicon glyphicon-minus' style='color:blue'></i> inventoried streams near wilderness ": twsba,
-    "<i class='glyphicon glyphicon-stop' style='color:red'></i> Impaired lakes inside wilderness": twil,
-    "<i class='glyphicon glyphicon-stop' style='color:red'></i> impaired lakes near wilderness": twilf,
-    "<i class='glyphicon glyphicon-stop' style='color:blue'></i> inventoried lakes inside wilderness": twlb,
-    "<i class='glyphicon glyphicon-stop' style='color:blue'></i> inventoried lakes near wilderness": twlba,
-    "<i class='glyphicon glyphicon-stop' style='color:green'></i><i class='glyphicon glyphicon-stop' style='color:orange'></i><i class='glyphicon glyphicon-stop' style='color:red'></i> Watershed condition class": twcc,
+    "<i class='glyphicon glyphicon-minus' style='color:red'><img src='/s/icons-main/icons/dash.svg' fill='red' alt='' width='16' height='16'></i> <strong>Impaired streams inside wilderness</strong>": twis,
+    "<i class='glyphicon glyphicon-minus' style='color:red'><img src='/s/icons-main/icons/dash.svg' fill='red' alt='' width='16' height='16'></i> impaired streams near wilderness": twisf,
+    "<i class='glyphicon glyphicon-minus' style='color:blue'><img src='/s/icons-main/icons/dash.svg' fill='blue' alt='' width='16' height='16'></i> inventoried streams inside wilderness": twsb,
+    "<i class='glyphicon glyphicon-minus' style='color:blue'><img src='/s/icons-main/icons/dash.svg' fill='blue' alt='' width='16' height='16'></i> inventoried streams near wilderness ": twsba,
+    "<i class='glyphicon glyphicon-stop' style='color:red'><img src='/s/icons-main/icons/hexagon-fill.svg' fill='red' alt='' width='16' height='16'></i> <strong>Impaired lakes inside wilderness</strong>": twil,
+    "<i class='glyphicon glyphicon-stop' style='color:red'><img src='/s/icons-main/icons/hexagon-fill.svg' fill='red' alt='' width='16' height='16'></i> impaired lakes near wilderness": twilf,
+    "<i class='glyphicon glyphicon-stop' style='color:blue'><img src='/s/icons-main/icons/hexagon-fill.svg' fill='blue' alt='' width='16' height='16'></i> inventoried lakes inside wilderness": twlb,
+    "<i class='glyphicon glyphicon-stop' style='color:blue'><img src='/s/icons-main/icons/hexagon-fill.svg' fill='blue' alt='' width='16' height='16'></i> inventoried lakes near wilderness": twlba,
+    "<i class='glyphicon glyphicon-stop' style='color:green'><img src='/s/icons-main/icons/hexagon-half.svg' fill='red' alt='' width='16' height='16'></i> <strong>Watershed condition class</strong>": twcc,
 };
 
 var mapicons = "<a href='#' id='ro-btn'><i class='glyphicon glyphicon-th' style='color:cyan'></i></a><a href='#' id='ri-btn'><i class='glyphicon glyphicon-th' style='color:hotpink'></i></a><a href='#' id='iw-btn'><i class='glyphicon glyphicon-th' style='color:red'></i></a><a href='#' id='wc-btn'><i class='glyphicon glyphicon-th' style='color:green'></i></a><a href='#' id='n-btn'><i class='glyphicon glyphicon-th' style='color:yellow'></i></a><a href='#' id='s-btn'><i class='glyphicon glyphicon-th' style='color:yellow'></i></a>"
@@ -960,9 +948,17 @@ maps.onAdd = function(map) {
 
 var baseLayers = getCommonBaseLayers(map);
 
-rc = L.control.layers({}, olsr, {collapsed:false}).addTo(map);
-wc = L.control.layers({}, olsw, {collapsed:false}).addTo(map);
-ac = L.control.layers({}, olsn, {collapsed:false}).addTo(map);
+rc = L.control.layers({}, olsr, {collapsed:true}).addTo(map);
+wc = L.control.layers({}, olsw, {collapsed:true}).addTo(map);
+ac = L.control.layers({}, olsn, {collapsed:true}).addTo(map);
+
+var groupedOverlays = {
+  "Remoteness": olsr,
+  "Water": olsw,
+  "Air": olsn
+};
+
+//L.control.groupedLayers({}, groupedOverlays).addTo(map);
 L.control.layers(baseLayers, {}).addTo(map);
 
 var info = L.control({
@@ -974,7 +970,7 @@ info.onAdd = function(map) {
     div.innerHTML += '<small></small>';
     return div;
 };
-info.addTo(map);
+//info.addTo(map);
 
 var info = L.control({
     position: 'topleft'
@@ -987,26 +983,11 @@ info.onAdd = function(map) {
 };
 info.addTo(map);
 
-var files = L.control({
-    position: 'bottomright'
-});
-files.onAdd = function(map) {
-    var div = L.DomUtil.create('div', 'info');
-    div.id += 'files';
-    div.innerHTML += '<small><span="small" style="color:DarkGrey">revision.2019.04</span></small>';
-    return div;
-};
-files.addTo(map);
-
 $("#about-btn").click(function() {
   $("#aboutModal").modal("show");
   $(".navbar-collapse.in").collapse("hide");
   return false;
 });
-
-$("#frem").html(frem);
-$("#fair").html(fair);
-$("#fwat").html(fwat);
 
 function r_ro() {
     map.removeLayer(tro);

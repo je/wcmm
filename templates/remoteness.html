@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <title id='wa_title'></title>
+  <meta charset="UTF-8" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+  <link href="/togo.css" rel="stylesheet">
+
+<body>
+  <div class='container'>
+    <div class='row mt-3'>
+     <h6><span class="float-start" id='wa_h6'></span> <span class="float-end">Remoteness</span></h6>
+    </div>
+    <div class='row'>
+      <div class='col-12 col-xxl-10 col-xl-10 col-lg-10 col-md-8 col-sm-12 words pb-4'>
+        <div class='' id='graph1'>
+        </div>
+      </div>
+      <div class='col-12 col-xxl-2 col-xl-2 col-lg-2 col-md-4 col-sm-12 words'>
+        <div class='mt-3 capt h' id='p1'>
+          They say the heart is a lonely hunter, but as a nation casts its lonely heart to the American wilderness, it seems true loneliness is getting harder to find.
+          <br>
+          The map of the wilderness on this page illustrates 'opportunities for solitude' -- which is to say, parts of the wilderness over half a mile away from human development are shaded <span class='cyan'>cyan</span> (distant from development <strong>outside the wilderness</strong>) or <span class='pink'>pink</span> (distant from development <strong>inside the wilderness</strong>).
+          <br>
+          <br>
+        </div>
+        <div class='' id='graph2'>
+        </div>
+        <div class='mt-3 capt h' id='p2'>
+          Describe the graph of inside/outside remoteness over time we are eventually going to have in this space. Only the lonely.
+          <br>
+          <br>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js" charset="utf-8"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.10"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/geojson-rewind@0.3.1/geojson-rewind.min.js"></script>
+<script src="/remoteness/remoteness.js"></script>

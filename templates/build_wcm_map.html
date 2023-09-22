@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>wcmm &sect {{name|lower}}</title>
+    <link rel="shortcut icon" type="image/x-icon" href="/s/favicon.ico" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.0.3/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/1.4.2/Control.FullScreen.min.css">
+    <link rel="stylesheet" href="/s/a/m.min.css">
+    <style>
+      html *{
+          box-sizing:border-box;
+      }
+      .container {
+          padding: 10px 15px 20px 15px;
+          margin-right: auto;
+          margin-left: auto;
+      }
+      .leaflet-container-default {
+          min-height: 600px;
+      }
+      .map{
+          height: 600px;
+      }
+      .map-loading:after{
+          content: "Loading...";    
+          display: inline-block;
+          width: 100%;    
+          height: 597px;
+          line-height: 597px;
+          font-size: 25px;
+          font-weight: bold;
+          text-align: center;
+          color: #FFF;
+          position: absolute;
+      }
+      #map-wrapper{
+          width: 1170px;
+          height: 597px;  
+          background-color: #bae568;
+          position: relative;
+      }
+      #map-wrapper .map{
+          float:left;
+      }
+      .leaflet-control-layers {border:none;}
+      #legend {max-width:500px;}
+      .dim {opacity:0.5;}
+      a, a:active, a:focus {
+         outline: none;
+      }
+    </style>
+    
+  </head>
+
+  <body>
+    <div class="navbar navbar-inverse navbar-fixed-top" style='background:DarkSlateGray' role="navigation">
+      <div class="container-fluid">
+            <span class="navbar-header pull-right">
+               <a class="navbar-brand pull-right" style="color:white;height:30px;padding:5px 5px 5px 15px;" href="/" id="about-btn"><strong><styled id='right'></styled></strong> <i class='glyphicon glyphicon-question-sign'></i></a>
+            </span>
+        
+        <div class="navbar-header">
+          <div class="navbar-icon-container">
+          </div>
+          <a class="navbar-brand" style="color:white;height:30px;padding:5px 15px 5px 15px;" href="/wcm/"><strong><styled><span id='left'></span></styled></strong></a>
+          <a class="navbar-brand pull-right" href="#" id="ro-btn"><i class='glyphicon glyphicon-th' style='color:cyan'></i></a>
+          <a class="navbar-brand pull-right" href="#" id="ri-btn"><i class='glyphicon glyphicon-th' style='color:hotpink'></i></a>
+          <a class="navbar-brand pull-right" href="#" id="iw-btn"><i class='glyphicon glyphicon-th' style='color:red'></i></a>
+          <a class="navbar-brand pull-right" href="#" id="wc-btn"><i class='glyphicon glyphicon-th' style='color:green'></i></a>
+          <a class="navbar-brand pull-right" href="#" id="n-btn"><i class='glyphicon glyphicon-th' style='color:yellow'></i></a>
+          <a class="navbar-brand pull-right" href="#" id="s-btn"><i class='glyphicon glyphicon-th' style='color:yellow'></i></a>
+        </div>
+        
+     </div>
+    </div>
+
+    <div id="container">
+      <div id="map"></div>
+    </div>
+    <div id="loading">
+      <div class="loading-indicator">
+        <div class="progress progress-striped active">
+          <div class="progress-bar progress-bar-success progress-bar-full"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="aboutModal" tabindex="-1" role="dialog">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-body">
+            <ul class="nav nav-tabs" id="aboutTabs">
+              <li class="active"><a href="#about" data-toggle="tab"><strong><i class="glyphicon glyphicon-question-sign"></i>&nbsp;Help</strong></a></li>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown"><strong><i class="glyphicon glyphicon-info-sign"></i>&nbsp;Documentation <b class="caret"></b></a></strong>
+                <ul class="dropdown-menu">
+                  <li><a href="#ro-tab" data-toggle="tab">Remoteness from development outside wilderness</a></li>
+                  <li><a href="#ri-tab" data-toggle="tab">Remoteness from development inside wilderness</a></li>
+                  <li><a href="#ntdep-tab" data-toggle="tab">Nitrogen total deposition trend</a></li>
+                  <li><a href="#stdep-tab" data-toggle="tab">Sulfur total deposition trend</a></li>
+                  <li><a href="#vis-tab" data-toggle="tab">Visibility trend</a></li>
+                  <li><a href="#is-tab" data-toggle="tab">Impaired streams</a></li>
+                  <li><a href="#il-tab" data-toggle="tab">Impaired lakes</a></li>
+                  <li><a href="#wcc-tab" data-toggle="tab">Watershed condition class</a></li>
+                </ul>
+              </li>
+              <li><a href="#ftab" data-toggle="tab"><strong><i class="glyphicon glyphicon-download"></i>&nbsp;Downloads</a></strong></li>
+              <button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+            </ul>
+            <div class="tab-content" id="aboutTabsContent">
+              <div class="tab-pane fade active in" id="about">
+                <div class="panel-body">
+                  <p>Measures pages show the Wilderness boundary with overlays for Wilderness Character Monitoring measures:
+                  <ul>
+                    <li>Remoteness from development outside wilderness</li>
+                    <li>Remoteness from development inside wilderness</li>
+                    <li>Nitrogen total deposition trend</li>
+                    <li>Sulfur total deposition trend</li>
+                    <li>Impaired streams</li>
+                    <li>Impaired lakes</li>
+                    <li>Watershed condition class</li>
+                  </ul>
+                  Overlays can be added and removed from the map using the layer control in the <strong>top right corner</strong> of the page. Clicking on features in an overlay will show related information in the popup box in the <strong>top left corner</strong> of the page.</p>
+
+                  <p>Graphs, maps, and tabular data downloads for the selected Wilderness are listed in the <strong>downloads tab</strong> of this help panel.</p>
+
+                  <p>Use the list or map on the <strong><a href='/wcm/'>index page</a></strong> to find a Wilderness, then click the name in the popup box in the <strong>top left corner</strong> of the map to open the measures page for that Wilderness.</p>
+
+                  <p class='text-danger'><strong>Don't use any numbers from these pages yet.</strong></p>
+                  <div>
+                    Email <strong>jredmonds@fs.fed.us</strong> with any questions or problems.
+                  </div>
+                </div>
+              </div>
+              <div class="tab-pane fade" id="ftab">
+                <div class="panel-body">
+                  <div id='frem'></div>
+                  <div id='fair'></div>
+                  <div id='fwat'></div>
+                  <br>
+                  <p class='text-danger'><strong>Don't use any numbers from these pages yet.</strong></p>
+                  <div>
+                    Email <strong>jredmonds@fs.fed.us</strong> with any questions or problems.
+                  </div>
+                </div>
+              </div>
+              <div class="tab-pane fade" id="ro-tab">
+                <p>Remoteness from development outside wilderness</p>
+              </div>
+              <div class="tab-pane fade" id="ri-tab">
+                <p>Remoteness from development inside wilderness</p>
+              </div>
+              <div class="tab-pane fade" id="ntdep-tab">
+                <p>Nitrogen total deposition trend</p>
+              </div>
+              <div class="tab-pane fade" id="stdep-tab">
+                <p>Sulfur total deposition trend</p>
+              </div>
+              <div class="tab-pane fade" id="vis-tab">
+                <p>Visibility trend</p>
+              </div>
+              <div class="tab-pane fade" id="is-tab">
+                <p>Impaired streams</p>
+              </div>
+              <div class="tab-pane fade" id="il-tab">
+                <p>Impaired lakes</p>
+              </div>
+              <div class="tab-pane fade" id="wcc-tab">
+                <p>Watershed condition class</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.0.3/leaflet.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.1.15/leaflet-providers.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/1.4.2/Control.FullScreen.min.js"></script>
+  <script type="text/javascript" src="/s/ltd/js/baselayers.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-hash/0.2.1/leaflet-hash.min.js"></script>
+  <script type="text/javascript">
+      $(document).ready(function() {
+          $.ajax('data.js', {dataType: 'script'})
+      });
+      $(document).one("ajaxStop", function () {
+        $("#loading").hide();
+        var hash = new L.Hash(map);
+        });
+    </script>
+
+  </body>
+</html>

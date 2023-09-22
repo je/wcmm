@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <title id='wa_title'></title>
+  <meta charset="UTF-8" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+  <link href="/togo.css" rel="stylesheet">
+
+<body>
+  <div class='container'>
+    <div class='row mt-3'>
+     <h6><span class="float-start" id='wa_h6'></span> <span class="float-end">Lichen Airscore Situation</span></h6>
+    </div>
+    <div class='row'>
+      <div class='col-12 col-xxl-10 col-xl-10 col-lg-10 col-md-8 col-sm-12 words pb-4'>
+        <div class='' id='graph1'>
+        </div>
+      </div>
+      <div class='col-12 col-xxl-2 col-xl-2 col-lg-2 col-md-4 col-sm-12 words'>
+        <div class='mt-3 capt h' id='p1'>
+          Describe the map here. Explain the bounds and designation date limits, and the idealized number of plots needed for the wilderness acreage. Note if this is a non-USFS wilderness area as data will be limited.
+          <br>
+          <br>
+        </div>
+      </div>
+    </div>
+    <div class='row'>
+      <div class='col-12 col-xxl-10 col-xl-10 col-lg-10 col-md-8 col-sm-12 words pb-4'>
+        <div class='' id='graph2'>
+        </div>
+      </div>
+      <div class='col-12 col-xxl-2 col-xl-2 col-lg-2 col-md-4 col-sm-12 words'>
+        <div class='mt-3 capt h' id='p2'>
+          Describe the graphs of 'Airscore Over Time with Paired Plots' here. Explain n/s airscores, missing scores, abandoned and new plots, paired samples, and sampling gaps.
+          <br>
+          <br>
+        </div>
+      </div>
+    </div>
+    <div class='row'>
+      <div class='col-12 col-xxl-10 col-xl-10 col-lg-10 col-md-8 col-sm-12 words pb-4'>
+        <div class='row'>
+          <div class='col-12 col-xxl-6 col-xl-6 col-lg-6 col-md-6 col-sm-12 words pb-4' id='graph1_5a'>
+          </div>
+          <div class='col-12 col-xxl-6 col-xl-6 col-lg-6 col-md-6 col-sm-12 words pb-4' id='graph1_5b'>
+          </div>
+        </div>
+        <div class='col-12 col-xxl-12 col-xl-12 col-lg-12 col-md-12 col-sm-12 words pb-4' id='graph1_5c'>
+        </div>
+      </div>
+      <div class='col-12 col-xxl-2 col-xl-2 col-lg-2 col-md-4 col-sm-12 words'>
+        <div class='mt-3 capt h' id='p3'>
+          Describe the graph of 'Airscore Boxplot / QQ' here. Actual statistic for the measure goes here, etc etc.
+          <br>
+          <br>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js" charset="utf-8"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.10"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
+<script src="/lichen/lichen.js"></script>

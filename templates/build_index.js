@@ -96,7 +96,7 @@ var map = L.map('map', {
 
 var gC = chroma.scale(['violet','indigo','blue','green','yellow','orange','red']).mode('lch').colors(447+1);
 
-$.getJSON('/s/wcm/data.json.packed').done(addTopoData);
+$.getJSON('/wcm/data.json.packed').done(addTopoData);
 
 L.TopoJSON = L.GeoJSON.extend({
   addData: function(jsonData) {    
@@ -189,7 +189,7 @@ function syncSidebar() {
   wcms.eachLayer(function (layer) {
     if (map.hasLayer(wcmLayer)) {
       if (map.getBounds().contains(layer.getBounds())) {
-        $("#feature-list tbody").append('<tr class="feature-row" id="' + L.stamp(layer) + '" geom="' + layer.geometry + '"><td class="dot" style="vertical-align:middle;padding:3px;"><div class="prog-icon" style="float:left;height:11px;width:11px;margin-top:7px;margin-right:5px;"></div></td><td class="feature-name"><a href="/s/wcm/' + slugify(layer.feature.properties.name) + '>"' + shn(layer.feature.properties.name) + '</a></td><td class="feature-designated">' + layer.feature.properties.year_designated + '</td></tr>');
+        $("#feature-list tbody").append('<tr class="feature-row" id="' + L.stamp(layer) + '" geom="' + layer.geometry + '"><td class="dot" style="vertical-align:middle;padding:3px;"><div class="prog-icon" style="float:left;height:11px;width:11px;margin-top:7px;margin-right:5px;"></div></td><td class="feature-name"><a href="/wcm/' + slugify(layer.feature.properties.name) + '>"' + shn(layer.feature.properties.name) + '</a></td><td class="feature-designated">' + layer.feature.properties.year_designated + '</td></tr>');
       }
     }
   });
@@ -213,7 +213,7 @@ topoLayer = new L.TopoJSON(null, {
                     },
                   onEachFeature: function (feature, layer) {
                     if (feature.properties) {
-                      var content = "<span class='small'><strong><a class='url-break text-prog' href='/s/wcm/" + slugify(feature.properties.name) + "/" + "' target='_blank'><span style='color:Black'>" + feature.properties.name + "</a></span></strong></span><br><span class='small'>Designated Year: <strong>" + feature.properties.year_designated + "</strong></span><br><span class='small'>WCM Baseline Year: <strong>" + feature.properties.year_designated + "</strong></span>";
+                      var content = "<span class='small'><strong><a class='url-break text-prog' href='/wcm/" + slugify(feature.properties.name) + "/" + "' target='_blank'><span style='color:Black'>" + feature.properties.name + "</a></span></strong></span><br><span class='small'>Designated Year: <strong>" + feature.properties.year_designated + "</strong></span><br><span class='small'>WCM Baseline Year: <strong>" + feature.properties.year_designated + "</strong></span>";
                       layer.on({
                         click: function (e) {
                           $("#perims").html(content);

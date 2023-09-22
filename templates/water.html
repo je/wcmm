@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <title>Impaired Waters</title>
+  <meta charset="UTF-8" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+  <style>
+  .blue { color: #4e79a7; }
+  .orange { color: #f28e2c; }
+  .red { color: #e15759; }
+  .cyan { color: #76b7b2; }
+  .green { color: #59a14f; }
+  .gold { color: #edc949; }
+  .purp { color: #af7aa1; }
+  .pink { color: #ff9da7; }
+  .brown { color: #9c755f; }
+  .grey { color: #bab0ab; }
+  .black { color: black; }
+
+  .labels { font-size: 0.1rem !important;}
+  .cell { font-size: 0.5rem !important;}
+  .words { font-size: 0.7rem !important;}
+
+  .background {
+    fill: none;
+    pointer-events: all;
+  }
+  .feature {
+    fill: #ddd;
+    cursor: pointer;
+  }
+  .feature.active {
+    fill: orange;
+  }
+
+  .ozl {
+    fill: none;
+    cursor: pointer;
+  }
+  .ozl.active {
+    fill: orange;
+  }
+
+  .mesh {
+    fill: none;
+    stroke: #fff;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .outline {
+    fill: #ddd;
+    stroke: #000;
+    stroke-width: 1.5px;
+  }
+  .was {
+    fill: forestgreen;
+    fill-opacity: 0.5;
+    stroke: none;
+    stroke-width: 0px;
+    stroke-opacity: 0.0;
+  }
+  .wa {
+    fill: #ddd;
+    fill-opacity: 0.2;
+    stroke: black;
+    stroke-width: 1.0px;
+    stroke-opacity: 1.0;
+  }
+
+</style>
+
+<body>
+  <div class='container'>
+    <div class='row mt-3'>
+     <h6>Impaired Waters</h6>
+    </div>
+    <div class='row'>
+      <div class='row col-12 col-xxl-10 col-xl-10 col-lg-10 col-md-10 col-sm-12 words'>
+       <div class='col-12 col-xxl-12 col-xl-12 col-lg-12 col-md-12 col-sm-12 words pt-2 pb-2' id='graph1'>
+       </div>
+        <p id="oz_">
+        Click the map to select an ozone station.
+        </p>
+       <div class='col-12 col-xxl-12 col-xl-12 col-lg-12 col-md-12 col-sm-12 words pb-4' id='graph1_1'>
+       </div>
+      </div>
+      <div class='col-12 col-xxl-2 col-xl-2 col-lg-2 col-md-2 col-sm-12 words' id="talk">
+        <p id="talk1">
+        </p>
+        <p>NWPS wilderness areas, these are drawn in <span class="green">green</span>. The view is initially centered on the <a href="#" onclick="reset();return false;">lower 48</a>, but there are stations in <a href="#" onclick="astate('Alaska');return false;">Alaska</a>, <a href="#" onclick="astate('Hawaii');return false;">Hawaii</a>, and <a href="#" onclick="astate('Puerto Rico');return false;">Puerto Rico</a>.
+        </p>
+      </div>
+    </div>
+    <div class='row'>
+      <div class='col-12 col-xxl-10 col-xl-10 col-lg-10 col-md-8 col-sm-12 words pb-4' id='graph1_'>
+      </div>
+      <div class='col-12 col-xxl-2 col-xl-2 col-lg-2 col-md-4 col-sm-12 words'>
+        <p>
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.7.0/dist/d3.min.js" charset="utf-8"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-geo@3.0.1/dist/d3-geo.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-geo-voronoi@2.0.1/dist/d3-geo-voronoi.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-delaunay@6"></script><script>
+  epsilon = 1e-6
+  function multiplex(streams) {
+    const n = streams.length;
+    return {
+      point(x, y) { for (const s of streams) s.point(x, y); },
+      sphere() { for (const s of streams) s.sphere(); },
+      lineStart() { for (const s of streams) s.lineStart(); },
+      lineEnd() { for (const s of streams) s.lineEnd(); },
+      polygonStart() { for (const s of streams) s.polygonStart(); },
+      polygonEnd() { for (const s of streams) s.polygonEnd(); }
+    };
+  }
+
+  function geoAlbersUsaPr() {
+    var cache,
+        cacheStream,
+        lower48 = d3.geoAlbers(), lower48Point,
+        alaska = d3.geoConicEqualArea().rotate([154, 0]).center([-2, 58.5]).parallels([55, 65]),
+        alaskaPoint,
+        hawaii = d3.geoConicEqualArea().rotate([157, 0]).center([-3, 19.9]).parallels([8, 18]),
+        hawaiiPoint,
+        puertoRico = d3.geoConicEqualArea().rotate([66, 0]).center([0, 18]).parallels([8, 18]),
+        puertoRicoPoint,
+        point,
+        pointStream = {point: function(x, y) { point = [x, y]; }};
+
+    function albersUsa(coordinates) {
+      var x = coordinates[0], y = coordinates[1];
+      return point = null,
+          (lower48Point.point(x, y), point)
+          || (alaskaPoint.point(x, y), point)
+          || (hawaiiPoint.point(x, y), point)
+          || (puertoRicoPoint.point(x, y), point);
+    }
+
+    albersUsa.invert = function(coordinates) {
+      var k = lower48.scale(),
+          t = lower48.translate(),
+          x = (coordinates[0] - t[0]) / k,
+          y = (coordinates[1] - t[1]) / k;
+      return (y >= 0.120 && y < 0.234 && x >= -0.425 && x < -0.214 ? alaska
+          : y >= 0.166 && y < 0.234 && x >= -0.214 && x < -0.115 ? hawaii
+          : y >= 0.204 && y < 0.234 && x >= 0.320 && x < 0.380 ? puertoRico
+          : lower48).invert(coordinates);
+    };
+
+    albersUsa.stream = function(stream) {
+      return cache && cacheStream === stream ? cache : cache = multiplex([lower48.stream(cacheStream = stream), alaska.stream(stream), hawaii.stream(stream), puertoRico.stream(stream)]);
+    };
+
+    albersUsa.precision = function(_) {
+      if (!arguments.length) return lower48.precision();
+      lower48.precision(_), alaska.precision(_), hawaii.precision(_), puertoRico.precision(_);
+      return reset();
+    };
+
+    albersUsa.scale = function(_) {
+      if (!arguments.length) return lower48.scale();
+      lower48.scale(_), alaska.scale(_ * 0.35), hawaii.scale(_), puertoRico.scale(_);
+      return albersUsa.translate(lower48.translate());
+    };
+
+    albersUsa.translate = function(_) {
+      if (!arguments.length) return lower48.translate();
+      var k = lower48.scale(), x = +_[0], y = +_[1];
+
+      lower48Point = lower48
+          .translate(_)
+          .clipExtent([[x - 0.455 * k, y - 0.238 * k], [x + 0.455 * k, y + 0.238 * k]])
+          .stream(pointStream);
+
+      alaskaPoint = alaska
+          .translate([x - 0.307 * k, y + 0.201 * k])
+          .clipExtent([[x - 0.425 * k + epsilon, y + 0.120 * k + epsilon], [x - 0.214 * k - epsilon, y + 0.234 * k - epsilon]])
+          .stream(pointStream);
+
+      hawaiiPoint = hawaii
+          .translate([x - 0.205 * k, y + 0.212 * k])
+          .clipExtent([[x - 0.214 * k + epsilon, y + 0.166 * k + epsilon], [x - 0.115 * k - epsilon, y + 0.234 * k - epsilon]])
+          .stream(pointStream);
+
+      puertoRicoPoint = puertoRico
+          .translate([x + 0.350 * k, y + 0.224 * k])
+          .clipExtent([[x + 0.320 * k, y + 0.204 * k], [x + 0.380 * k, y + 0.234 * k]])
+          .stream(pointStream).point;
+
+      return reset();
+    };
+
+    function reset() {
+      cache = cacheStream = null;
+      return albersUsa;
+    }
+
+    return albersUsa.scale(950);
+  }
+
+  projection = d3.geoAlbers().scale(1265).translate([486,300])
+
+var width = 960,
+    height = 600,
+    active = d3.select(null);
+
+var projection_ = d3.geoAlbersUsa()
+    .scale(1000)
+    .translate([width / 2, height / 2]);
+
+var zoom = d3.zoom()
+    .scaleExtent([1, 35])
+    .on("zoom", zoomed);
+
+var path = d3.geoPath()
+    .projection(projection);
+
+var par = d3.select("#graph1").style("overflow", "hidden");
+
+const svg = par.append("svg")
+      .attr("viewBox", [0, 0, width, height])
+      .style("overflow", "hidden")
+      .on("click", reset);
+
+//var svg = par.append("svg")
+    //.attr("width", width)
+    //.attr("height", height)
+    //.style("overflow", "hidden")
+    //.on("click", stopped, true);
+
+svg.append("rect")
+    .attr("class", "background")
+    .attr("width", width)
+    .attr("height", height)
+    .on("click", reset);
+
+var g = svg.append("g");
+
+svg.call(zoom);
+
+var promises = [];
+promises.push(d3.json("/topics/counties-10m.json"))
+promises.push(d3.json("/topics/_nwps-2022-12-16.topojson"))
+
+  Promise.all(promises).then(function(values) {
+    us = values[0]
+    nwps = values[1]
+    oz = nwps
+
+    var s_ak = 1.708294671825827
+    var t_ak = [ 745.5731256995305, 866.559731655 ]
+    var s_hi = 17.527770536913636
+    var t_hi = [ 9958.336800567304, -3339.0292896659394 ]
+    var s_pr = 19.869230069639574
+    var t_pr = [ -19826.94586301522, -10662.718296611025 ]
+
+    was = topojson.feature(nwps, nwps.objects.data).features
+
+    //svg.attr("style", "outline: thin solid black;");
+
+    svg.append("clipPath")
+        .datum(topojson.merge(us, us.objects.states.geometries))
+        .attr("id", "usaClip")
+        .append("path")
+        .attr("d", d3.geoPath(projection));
+
+    const states = g.append("g")
+      .attr("fill", "#ddd")
+      .attr("cursor", "pointer")
+      .selectAll("path")
+      .data(topojson.feature(us, us.objects.states).features)
+    .enter().append("path")
+      .attr("class", "feature")
+      .attr("pointer-events", "none")
+      .attr("d", path);
+
+    g.append("path")
+      .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+      .attr("class", "mesh")
+      .attr("d", path);
+
+    console.log(was);
+    const was_ = g.append("g")
+        .attr("fill", "#f28e2c")
+        .attr("stroke", "white")
+        .attr("stroke-opacity", 0.5)
+        .attr("pointer-events", "none")
+      .selectAll("path")
+      .data(was)
+      .join("path")
+      .attr("class", "was")
+        .attr("d", d3.geoPath(projection))
+      .append("title")
+        .text(d => {
+          const p = d.properties;
+          return `${p.name}`;
+      });
+
+    const ozl_ = g.append("g")
+            .attr("clip-path", "url(#usaClip)")
+            .attr("fill", "white")
+            .attr("stroke", "none")
+            .attr("stroke-width", 0.5)
+            .attr("pointer-events", "all")
+          .selectAll("path")
+          .data(d3.geoVoronoi().polygons(was).features)
+          .enter().append("path")
+            .attr("d", d3.geoPath().projection(projection))
+            .attr("class", "ozl")
+            .on("click", clicked)
+            .append("title")
+            .text(d => {
+              const p = d.properties.site.properties;
+              //return `${p['sc']} ${p['sn']}
+              //return `${p['name']}`;
+              return `${p['name']}`;
+      });
+
+    const ozd_ = g.append("g")
+          .selectAll("path")
+            .data(was)
+          .join("path")
+            .attr("class", "ozd")
+            .attr("pointer-events", "none")
+            .attr("fill", "#4e79a7")
+            .attr("fill-opacity", 0.4)
+            .attr("d", d3.geoPath(projection).pointRadius(0.5));
+
+        nation = topojson.feature(us, us.objects.nation)
+        statemesh = topojson.mesh(us, us.objects.states, (a, b) => a !== b)
+});
+
+  function clicked(event, d) {
+    const [[x0, y0], [x1, y1]] = path.bounds(d.geometry);
+    event.stopPropagation();
+    g.selectAll(".labels").remove();
+    g.selectAll(".rods").remove();
+    var states = g.selectAll(".ozl")
+    states.transition().style("fill", null);
+    var name_ = this.__data__.properties.name;
+    //var sn_ = this.__data__.properties.site.properties.sn;
+    svg.attr("style", "outline: thin solid black;");
+    d3.select(this).transition().style("fill", "#4e79a7").style("fill-opacity", 0.25);
+    svg.transition().duration(750).call(
+      zoom.transform,
+      d3.zoomIdentity
+        .translate(width / 2, height / 2)
+        .scale(Math.min(8, 0.9 / Math.max((x1 - x0) / width, (y1 - y0) / height)))
+        .translate(-(x0 + x1) / 2, -(y0 + y1) / 2),
+      d3.pointer(event, svg.node())
+    );
+
+    var ro = was.filter(function(d) { return d.properties.name === name_ });
+    var rol = g.selectAll(".labels")
+      .data(ro)
+      .enter().append("text")
+      .attr("class", "labels")
+      .text(function(d) { return d.properties.name; })
+      .attr("dx", "1.1")
+      .attr("dy", "0.08")
+      .attr("x", function(d) {
+          return projection(d3.centroid(d.geometry))[0];
+      })
+      .attr("y", function(d) {
+          return projection(d3.centroid(d.geometry))[1];
+      });
+    var rod = g.selectAll(".rods")
+      .data(ro)
+      .enter().append("path")
+      .attr("class", "rods")
+      .attr("pointer-events", "none")
+      .attr("fill", "#4e79a7")
+      .attr("fill-opacity", 1)
+      .attr("d", d3.geoPath(projection).pointRadius(1.0));
+
+    let geoGenerator = d3.geoPath().projection(projection);
+    let pixelArea = geoGenerator.area(d);
+    let bounds = geoGenerator.bounds(d);
+    let centroid = geoGenerator.centroid(d);
+    let measure = geoGenerator.measure(d);
+
+  }
+
+  function reset() {
+    var talk = '<p id="talk1">NWPS wilderness areas, these are drawn in <span class="green">green</span>. The view is initially centered on the <a href="#" onclick="reset();return false;">lower 48</a>, but there are stations in <a href="#" onclick="astate(\'Alaska\');return false;">Alaska</a>, <a href="#" onclick="astate(\'Hawaii\');return false;">Hawaii</a>, and <a href="#" onclick="astate(\'Puerto Rico\');return false;">Puerto Rico</a>.</p>'
+
+    document.getElementById('graph1_1').innerHTML = "";
+    document.getElementById('talk').innerHTML = talk;
+    document.getElementById('oz_').textContent = "Click the map to select an ozone station.";
+    g.selectAll(".labels").remove();
+    g.selectAll(".rods").remove();
+    var states = g.selectAll(".ozl")
+    states.transition().style("fill", null).style("fill-opacity", 0.01);
+    svg.attr("style", "outline: none;");
+    svg.transition().duration(750).call(
+      zoom.transform,
+      d3.zoomIdentity,
+      d3.zoomTransform(svg.node()).invert([width / 2, height / 2])
+    );
+  }
+
+  function astate(state) {
+    awa = state
+    was = topojson.feature(us, us.objects.states).features
+    wa = was.filter(function(d) { return (d.properties.name == awa);} )[0]
+
+    var bb = path.bounds(wa);
+    var bbh = Math.abs(bb[1][1] - bb[0][1]);
+    var bbw = Math.abs(bb[1][0] - bb[0][0]);
+    var r = (bbh / bbw);
+    var width = 975;
+    var height = 600;
+
+    var s_s = .95 / Math.max((bb[1][0] - bb[0][0]) / width, (bb[1][1] - bb[0][1]) / height),
+      t_s = [(width - s_s * (bb[1][0] + bb[0][0])) / 2, (height - s_s * (bb[1][1] + bb[0][1])) / 2];
+
+    const [[x0, y0], [x1, y1]] = path.bounds(wa.geometry);
+
+    document.getElementById('graph1_1').innerHTML = "";
+    document.getElementById('oz_').textContent = "Click the map to select an ozone station.";
+    g.selectAll(".labels").remove();
+    g.selectAll(".rods").remove();
+    var states = g.selectAll(".ozl")
+    states.transition().style("fill", null).style("fill-opacity", 0.01);
+    svg.attr("style", "outline: none;");
+    svg.transition().duration(750).call(
+      zoom.transform,
+      d3.zoomIdentity
+        .translate(width / 2, height / 2)
+        .scale(Math.min(8, 0.9 / Math.max((x1 - x0) / width, (y1 - y0) / height)))
+        .translate(-(x0 + x1) / 2, -(y0 + y1) / 2)
+    );
+  }
+
+  function zoomed(event) {
+    const {transform} = event;
+    g.attr("transform", transform);
+    g.attr("stroke-width", 1 / transform.k);
+  }
+
+function stopped() {
+  if (event.defaultPrevented) event.stopPropagation();
+}
+</script>
