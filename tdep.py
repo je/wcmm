@@ -1,5 +1,6 @@
 """ Total deposition. """
 
+import shutil
 import fiona
 import geopandas
 import pandas
@@ -15,24 +16,29 @@ from utils import *
 
 max_iter = 9999
 
-
 def tdep_stack(ns):
-    years = list(range(2000, 2022))
+    years = list(range(2000, 2023))
+    dd = "/2023-11-28/"
     file_list = []
     for year in years:
-        file_list.append(
-            "/Volumes/PATRIOT/cda_data/_tdep_"
-            + ns
-            + "/2023-04-25/"
-            + ns
-            + "_tw-"
-            + str(year)
-            + "/"
-            + ns
-            + "_tw-"
-            + str(year)
-            + ".tif"
-        )
+        fn = ("/Volumes/PATRIOT/cda_data/_tdep_"
+        + ns
+        + dd
+        + ns
+        + "_tw-"
+        + str(year))
+        shutil.unpack_archive(fn + '.zip', fn)
+        tn = ("/Volumes/PATRIOT/cda_data/_tdep_"
+        + ns
+        + dd
+        + ns
+        + "_tw-"
+        + str(year)
+        + "/"
+        + ns
+        + "_tw-"
+        + str(year))
+        file_list.append(tn + ".tif")
 
     # Read metadata of first file
     with rasterio.open(file_list[0]) as src0:
@@ -76,162 +82,172 @@ def tdep2_awilderness_nwps(which_wilderness, ns):  # cut and stack rasters to sh
     with fiona.open(out_dir + awilderness_n_5mi_file, "r") as shapefile:
         shapefeatures = [feature["geometry"] for feature in shapefile]
 
-    with rasterio.open(tdep_national) as src:
-        out_image, out_transform = rasterio.mask.mask(src, shapefeatures, crop=True)
-        out_meta = src.meta
-    out_meta.update(
-        {
-            "driver": "GTiff",
-            "height": out_image.shape[1],
-            "width": out_image.shape[2],
-            "transform": out_transform,
-        }
-    )
-    with rasterio.open(
-        out_dir + slug_wilderness + "-" + ns + ".tif", "w", **out_meta
-    ) as dest:
-        dest.write(out_image)
-    log(
-        slug_wilderness,
-        slug_agency,
-        "GREEN",
-        str(slug_wilderness) + " " + ns + " tdep mask created",
-    )
+    try:
+        with rasterio.open(tdep_national) as src:
+            out_image, out_transform = rasterio.mask.mask(src, shapefeatures, crop=True)
+            out_meta = src.meta
+        out_meta.update(
+            {
+                "driver": "GTiff",
+                "height": out_image.shape[1],
+                "width": out_image.shape[2],
+                "transform": out_transform,
+            }
+        )
+        with rasterio.open(
+            out_dir + slug_wilderness + "-" + ns + ".tif", "w", **out_meta
+        ) as dest:
+            dest.write(out_image)
+        log(
+            slug_wilderness,
+            slug_agency,
+            "GREEN",
+            str(slug_wilderness) + " " + ns + " tdep mask created",
+        )
 
-    tdep_years = [
-        # "20230",
-        # "20220",
-        "20210",
-        "20200",
-        "20190",
-        "20180",
-        "20170",
-        "20160",
-        "20150",
-        "20140",
-        "20130",
-        "20120",
-        "20110",
-        "20100",
-        "20090",
-        "20080",
-        "20070",
-        "20060",
-        "20050",
-        "20040",
-        "20030",
-        "20020",
-        "20010",
-        "20000",
-    ]  # 20 out
-    first = 0
-    for tdep_year in tdep_years:
-        first = first + 1
-        bandnum = int(tdep_year[:4]) - 1999
-        with rasterio.open(out_dir + slug_wilderness + "-" + ns + ".tif") as rds:
-            band = rds.read(bandnum)
-            transform = rds.transform
-            mask = None
-            if first == 1:
-                colname = tdep_year[-5:]
-                print(
-                    colorama.Fore.WHITE
-                    + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                    + colorama.Style.BRIGHT
-                    + " vectorizing "
-                    + colname
-                    + " grid"
-                )
-                results = (
-                    {"properties": {"c": i, "raster_val": v}, "geometry": s}
-                    for i, (s, v) in enumerate(
-                        shapes(band, mask=mask, transform=transform)
+        tdep_years = [
+            # "20230",
+            "20220",
+            "20210",
+            "20200",
+            "20190",
+            "20180",
+            "20170",
+            "20160",
+            "20150",
+            "20140",
+            "20130",
+            "20120",
+            "20110",
+            "20100",
+            "20090",
+            "20080",
+            "20070",
+            "20060",
+            "20050",
+            "20040",
+            "20030",
+            "20020",
+            "20010",
+            "20000",
+        ]  # 20 out
+        first = 0
+        for tdep_year in tdep_years:
+            first = first + 1
+            bandnum = int(tdep_year[:4]) - 1999
+            with rasterio.open(out_dir + slug_wilderness + "-" + ns + ".tif") as rds:
+                band = rds.read(bandnum)
+                transform = rds.transform
+                mask = None
+                if first == 1:
+                    colname = tdep_year[-5:]
+                    print(
+                        colorama.Fore.WHITE
+                        + str(datetime.now().strftime("%Y%m%d_%H%M"))
+                        + colorama.Style.BRIGHT
+                        + " vectorizing "
+                        + colname
+                        + " grid"
                     )
-                )
-                geoms = list(results)
-                pd_raster = geopandas.GeoDataFrame.from_features(geoms)
-                pd_raster.crs = ras_epsg
-                pd_raster = pd_raster.rename(columns={"raster_val": colname})
-                pd_raster = pd_raster[["c", colname, "geometry"]]
-                tdep_stack = pd_raster
-            else:
-                colname = tdep_year[-5:]
-                print(
-                    colorama.Fore.WHITE
-                    + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                    + colorama.Style.BRIGHT
-                    + " indexing "
-                    + colname
-                    + " grid"
-                )
-                results = (
-                    {"properties": {"c": i, "raster_val": v}, "geometry": s}
-                    for i, (s, v) in enumerate(
-                        shapes(band, mask=mask, transform=transform)
+                    results = (
+                        {"properties": {"c": i, "raster_val": v}, "geometry": s}
+                        for i, (s, v) in enumerate(
+                            shapes(band, mask=mask, transform=transform)
+                        )
                     )
-                )
-                geoms = list(results)
-                pd_raster = geopandas.GeoDataFrame.from_features(geoms)
-                pd_raster = pd_raster.rename(columns={"raster_val": colname})
-                pd_raster = pd_raster[["c", colname, "geometry"]]
+                    geoms = list(results)
+                    pd_raster = geopandas.GeoDataFrame.from_features(geoms)
+                    pd_raster.crs = ras_epsg
+                    pd_raster = pd_raster.rename(columns={"raster_val": colname})
+                    pd_raster = pd_raster[["c", colname, "geometry"]]
+                    tdep_stack = pd_raster
+                    print(tdep_stack.head)
+                else:
+                    colname = tdep_year[-5:]
+                    print(
+                        colorama.Fore.WHITE
+                        + str(datetime.now().strftime("%Y%m%d_%H%M"))
+                        + colorama.Style.BRIGHT
+                        + " indexing "
+                        + colname
+                        + " grid"
+                    )
+                    results = (
+                        {"properties": {"c": i, "raster_val": v}, "geometry": s}
+                        for i, (s, v) in enumerate(
+                            shapes(band, mask=mask, transform=transform)
+                        )
+                    )
+                    geoms = list(results)
+                    pd_raster = geopandas.GeoDataFrame.from_features(geoms)
+                    pd_raster = pd_raster.rename(columns={"raster_val": colname})
+                    pd_raster = pd_raster[["c", colname, "geometry"]]
+                    print(pd_raster.head)
 
-                points = pd_raster.copy()
-                points.crs = ras_epsg
-                theboth = geopandas.sjoin(
-                    tdep_stack, points, how="left", predicate="contains"
-                )
+                    points = pd_raster.copy()
+                    points.crs = ras_epsg
+                    theboth = geopandas.sjoin(
+                        tdep_stack, points, how="left", predicate="contains"
+                    )
 
-                tdep_stack = geopandas.GeoDataFrame(theboth, geometry="geometry")
-                extra_cols = [
-                    e
-                    for e in tdep_stack.columns
-                    if e
-                    not in [
-                        "FID",
-                        "20230",
-                        "20220",
-                        "20210",
-                        "20200",
-                        "20190",
-                        "20180",
-                        "20170",
-                        "20160",
-                        "20150",
-                        "20140",
-                        "20130",
-                        "20120",
-                        "20110",
-                        "20100",
-                        "20090",
-                        "20080",
-                        "20070",
-                        "20060",
-                        "20050",
-                        "20040",
-                        "20030",
-                        "20020",
-                        "20010",
-                        "20000",
-                        "geometry",
+                    tdep_stack = geopandas.GeoDataFrame(theboth, geometry="geometry")
+                    extra_cols = [
+                        e
+                        for e in tdep_stack.columns
+                        if e
+                        not in [
+                            "FID",
+                            "20230",
+                            "20220",
+                            "20210",
+                            "20200",
+                            "20190",
+                            "20180",
+                            "20170",
+                            "20160",
+                            "20150",
+                            "20140",
+                            "20130",
+                            "20120",
+                            "20110",
+                            "20100",
+                            "20090",
+                            "20080",
+                            "20070",
+                            "20060",
+                            "20050",
+                            "20040",
+                            "20030",
+                            "20020",
+                            "20010",
+                            "20000",
+                            "geometry",
+                        ]
                     ]
-                ]
-                tdep_stack = tdep_stack.drop(columns=extra_cols)
-                tdep_stack.crs = ras_epsg
+                    tdep_stack = tdep_stack.drop(columns=extra_cols)
+                    tdep_stack.crs = ras_epsg
 
-    tdep_stack["acres"] = tdep_stack["geometry"].area / 4046.856
-    tdep_stack = tdep_stack[tdep_stack["acres"] <= 8000]  # more than one cell
-    tdep_stack = tdep_stack.drop(columns=["acres"])
+        tdep_stack["acres"] = tdep_stack["geometry"].area / 4046.856
+        tdep_stack = tdep_stack[tdep_stack["acres"] <= 8000]  # more than one cell
+        tdep_stack = tdep_stack.drop(columns=["acres"])
 
-    tdep_stack.to_file(driver=out_driver, filename=out_dir + ns + "tdep-cut-stack.shp")
-    print(
-        colorama.Fore.GREEN
-        + str(datetime.now().strftime("%Y%m%d_%H%M"))
-        + colorama.Style.BRIGHT
-        + " "
-        + ns
-        + " tdep-cut-stack.shp"
-        + " created"
-    )
+        tdep_stack.to_file(driver=out_driver, filename=out_dir + ns + "tdep-cut-stack.shp")
+        print(
+            colorama.Fore.GREEN
+            + str(datetime.now().strftime("%Y%m%d_%H%M"))
+            + colorama.Style.BRIGHT
+            + " "
+            + ns
+            + " tdep-cut-stack.shp"
+            + " created"
+        )
+
+    except:
+        log(slug_wilderness, slug_agency, "WHITE", ns + "tdep empty")
+        empty_file_out = out_dir + slug_wilderness + "-" + ns + "tdep-empty.txt"
+        tdep_wgrid = None
+        with uopen(empty_file_out, "a"):
+            os.utime(empty_file_out, None)
 
 
 def tdep_awilderness_graphs_nwps(which_wilderness, ns):  # make goofy graphs
@@ -390,9 +406,9 @@ def tdep_awilderness_graphs_nwps(which_wilderness, ns):  # make goofy graphs
                 xmax = max(x_vals)
                 ticks = x_vals
                 pyplot.suptitle(
-                    which_wilderness[0]
+                    which_wilderness[1]
                     + " "
-                    + which_wilderness[1]
+                    + which_wilderness[2]
                     + "\nTotal "
                     + nsname
                     + " Deposition Trend from "
@@ -442,9 +458,9 @@ def tdep_awilderness_graphs_nwps(which_wilderness, ns):  # make goofy graphs
                     )
                     ticks = x_vals0
                     pyplot.suptitle(
-                        which_wilderness[0]
+                        which_wilderness[1]
                         + " "
-                        + which_wilderness[1]
+                        + which_wilderness[2]
                         + "\nTotal "
                         + nsname
                         + " Deposition Trend from "
@@ -499,9 +515,9 @@ def tdep_awilderness_graphs_nwps(which_wilderness, ns):  # make goofy graphs
 
                 pyplot.xticks(ticks)
                 pyplot.suptitle(
-                    which_wilderness[0]
+                    which_wilderness[1]
                     + " "
-                    + which_wilderness[1]
+                    + which_wilderness[2]
                     + "\nTotal "
                     + nsname
                     + " Deposition Trend from "
@@ -720,9 +736,9 @@ def tdep_awilderness_graphs_nwps(which_wilderness, ns):  # make goofy graphs
 
                         pyplot.xticks(ticks)
                         pyplot.suptitle(
-                            which_wilderness[0]
+                            which_wilderness[1]
                             + " "
-                            + which_wilderness[1]
+                            + which_wilderness[2]
                             + "\nTotal "
                             + nsname
                             + " Deposition Trend from "
@@ -931,9 +947,9 @@ def tdep_awilderness_graphs_nwps(which_wilderness, ns):  # make goofy graphs
 
                     pyplot.xticks(ticks)
                     pyplot.suptitle(
-                        which_wilderness[0]
+                        which_wilderness[1]
                         + " "
-                        + which_wilderness[1]
+                        + which_wilderness[2]
                         + "\nTotal "
                         + nsname
                         + " Deposition Trend from "
@@ -1204,9 +1220,9 @@ def tdep_wilderness_maps_nwps(which_wilderness, ns):  # make maps
                 ax.set_xlim(xlim)
                 ax.set_ylim(ylim)
                 title = (
-                    which_wilderness[0]
+                    which_wilderness[1]
                     + " "
-                    + which_wilderness[1]
+                    + which_wilderness[2]
                     + "\n"
                     + nsname
                     + " Total Deposition"
@@ -1306,7 +1322,7 @@ def tdep_do_nwps(which_wilderness, ns):
             slug_wilderness,
             slug_agency,
             "WHITE",
-            which_wilderness[0] + " " + which_wilderness[1] + " " + ns + " tdep empty",
+            which_wilderness[1] + " " + which_wilderness[2] + " " + ns + " tdep empty",
         )
     else:
         x_list, y_list = csv_to_lists(out_dir + awilderness_csv_file)
@@ -1444,9 +1460,9 @@ def trend_tdep(which_wilderness, ns, wilderness_designation_year, x_list, y_list
     pyplot.xticks(x)
 
     pyplot.suptitle(
-        which_wilderness[0]
+        which_wilderness[1]
         + " "
-        + which_wilderness[1]
+        + which_wilderness[2]
         + "\nTotal "
         + nsname
         + " Deposition Trend from "

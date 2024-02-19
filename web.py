@@ -6,15 +6,19 @@ done.
 import csv
 import json
 import traceback
-from shutil import copyfile
+import contextlib
+from shutil import copyfile, rmtree
 from urllib.parse import urlparse
 from urllib.request import urlretrieve
+from datetime import datetime, timedelta
 
 import dateutil.parser as dparser
 import geopandas
 import pandas
 import requests
+import operator
 import topojson
+from pytopojson import topology
 from bs4 import BeautifulSoup  # , SoupStrainer
 from django.template.loader import get_template
 from django.utils.text import slugify
@@ -353,9 +357,8 @@ def pull_edw_links():
                 lrefresh = lparent.find_all("p")[-1].get_text()
                 if "Date of last refresh" in lrefresh:
                     r_date = dparser.parse(lrefresh, fuzzy=True)
-                    print(r_date)
                     ldf = pandas.DataFrame([[lf, r_date]], columns=["link", "new_date"])
-                    df = df.append(ldf)
+                    df = pandas.concat([df, ldf])
                 else:
                     print("skipping " + lf)
     df = df.sort_values("link", ascending=False)
@@ -382,14 +385,14 @@ def pull_edw_local():
     df = pandas.DataFrame({"path": dfs})
     # df['shortpath'] = df['path'].str.replace(data_dir, ' ', regex=True)
     # df = pandas.DataFrame(df.row.str.split('\\',1).tolist(),columns = ['date','file'])
-    df[["base", "old_date", "file"]] = df["path"].str.rsplit(slash, 2, expand=True)
+    df[["base", "old_date", "file"]] = df["path"].str.rsplit(slash, n=2, expand=True)
     df = df[["old_date", "file"]]
 
     lfs = [f for f in os.listdir(out_dir) if f.endswith("-links.csv")]
     lfs = sorted(lfs, reverse=True)
     current = lfs[0]
     current = pandas.read_csv(out_dir + current)
-    current[["path", "file"]] = current["link"].str.rsplit("/", 1, expand=True)
+    current[["path", "file"]] = current["link"].str.rsplit("/", n=1, expand=True)
     current = current[["new_date", "file", "link"]]
     # current = pandas.read_csv(out_dir + current)
     # current = current.rename(index=str, columns={'new_date': 'old_date'})
@@ -412,7 +415,7 @@ def pull_edw_data():
     current = lfs[0]
     print("current: " + current)
     current = pandas.read_csv(out_dir + current)
-    current[["path", "file"]] = current["link"].str.rsplit("/", 1, expand=True)
+    current[["path", "file"]] = current["link"].str.rsplit("/", n=1, expand=True)
     current = current[["new_date", "file", "link"]]
     checks = [f for f in os.listdir(out_dir) if f.endswith("-check.csv")]
     checks = sorted(checks, reverse=True)
@@ -434,11 +437,10 @@ def pull_edw_data():
             filename = os.path.basename(a.path)
             # print(new_date + ' update to ' + filename)
             if not os.path.exists(data_dir + new_date + slash + filename):
-                log(None, None, "GREEN", "downloading " + filename)
+                log(None, None, "GREEN", "downloading " + new_date + " " + filename)
                 file = urlretrieve(url, data_dir + new_date + slash + filename)
             else:
                 log(None, None, "CYAN", "skipping " + filename)
-                pass
     dif = check.loc[check["new_date"] != check["old_date"]]
 
 
@@ -570,7 +572,7 @@ def pull_data_states():  # not happening yet
             lrefresh = lparent.find_all("p")[-1].get_text()
             r_date = dparser.parse(lrefresh, fuzzy=True)
             ldf = pandas.DataFrame([[lf, r_date]], columns=["link", "new_date"])
-            df = df.append(ldf)
+            df = pandas.concat([df, ldf])
     quit()
     df = df.sort_values("caption", ascending=False)
     df.to_csv(out_dir + rev_date + "-links.csv")
@@ -581,7 +583,7 @@ def pull_data_states():  # not happening yet
     state_pages = pandas.DataFrame()
     states_list = []
     ldf = pandas.DataFrame([[lf, r_date]], columns=["state", "page"])
-    df = df.append(ldf)
+    df = pandas.concat([df, ldf])
     df = df.sort_values("link", ascending=False)
     df.to_csv(out_dir + rev_date + "-links.csv")
 
@@ -592,846 +594,14 @@ def pull_data_states():  # not happening yet
     soup = BeautifulSoup(data, features="html.parser")
 
 
-def shps_to_geojsons_to_topojsons(which_wilderness):
-    slug_wilderness = slugify(which_wilderness)
-    out_dir = static_dir + "wcm" + slash + slug_wilderness + slash + "map" + slash
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-
-    tails = ["", "-ntdep-grid", "-stdep-grid"]
-    shp_list = [slug_wilderness + s + ".shp" for s in tails]
-    in_dir = base_dir + slug_wilderness + slash
-    for ashp in shp_list:
-        filename = os.path.splitext(ashp)[0]
-        if not os.path.exists(in_dir + ashp):
-            print(
-                colorama.Fore.WHITE
-                + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                + colorama.Style.NORMAL
-                + " "
-                + ashp
-                + " skipped"
-            )
-        else:
-            in_shp = geopandas.read_file(in_dir + ashp)
-            # in_shp['geometry'] = in_shp.geometry.apply(cast_to_multigeometry)
-            gdf_to_multigeometry(in_shp)
-            if filename == slug_wilderness:
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e
-                    not in [
-                        "WILDERNESS",
-                        "NAME",
-                        "DESIGNATED",
-                        "BASELINE",
-                        "UPDATED",
-                        "geometry",
-                    ]
-                ]
-                renames = {
-                    "WILDERNESS": "number",
-                    "NAME": "name",
-                    "DESIGNATED": "year_designated",
-                    "BASELINE": "year_baseline",
-                    "UPDATED": "updated",
-                }
-            if filename == slug_wilderness + "-wcc":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e
-                    not in [
-                        "WATERSHED_",
-                        "WATERSHE_1",
-                        "WATERSHE_2",
-                        "acres",
-                        "geometry",
-                    ]
-                ]
-                renames = {
-                    "WATERSHED_": "number",
-                    "WATERSHE_1": "name",
-                    "WATERSHE_2": "wcc",
-                }
-            if filename == slug_wilderness + "-streams":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e not in ["REACHCODE", "miles", "geometry"]
-                ]
-                renames = {
-                    "REACHCODE": "reachcode",
-                }
-            if filename == slug_wilderness + "-lakes":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["REACHCODE", "geometry"]
-                ]
-                renames = {
-                    "REACHCODE": "reachcode",
-                }
-            if filename == slug_wilderness + "-ntdep-grid":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e
-                    not in [
-                        "c",
-                        "20200",
-                        "20190",
-                        "20180",
-                        "20170",
-                        "20160",
-                        "20150",
-                        "20140",
-                        "20130",
-                        "20120",
-                        "20110",
-                        "20100",
-                        "20090",
-                        "20080",
-                        "20070",
-                        "20060",
-                        "20050",
-                        "20040",
-                        "20030",
-                        "20020",
-                        "20010",
-                        "20000",
-                        "y",
-                        "x",
-                        "m",
-                        "b",
-                        "endy",
-                        "p_value",
-                        "geometry",
-                    ]
-                ]
-                renames = {
-                    "20200": "2020",
-                    "20190": "2019",
-                    "20180": "2018",
-                    "20170": "2017",
-                    "20160": "2016",
-                    "20150": "2015",
-                    "20140": "2014",
-                    "20130": "2013",
-                    "20120": "2012",
-                    "20110": "2011",
-                    "20100": "2010",
-                    "20090": "2009",
-                    "20080": "2008",
-                    "20070": "2007",
-                    "20060": "2006",
-                    "20050": "2005",
-                    "20040": "2004",
-                    "20030": "2003",
-                    "20020": "2002",
-                    "20010": "2001",
-                    "20000": "2000",
-                }
-            if filename == slug_wilderness + "-stdep-grid":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e
-                    not in [
-                        "c",
-                        "20200",
-                        "20190",
-                        "20180",
-                        "20170",
-                        "20160",
-                        "20150",
-                        "20140",
-                        "20130",
-                        "20120",
-                        "20110",
-                        "20100",
-                        "20090",
-                        "20080",
-                        "20070",
-                        "20060",
-                        "20050",
-                        "20040",
-                        "20030",
-                        "20020",
-                        "20010",
-                        "20000",
-                        "y",
-                        "x",
-                        "m",
-                        "b",
-                        "endy",
-                        "p_value",
-                        "geometry",
-                    ]
-                ]
-                renames = {
-                    "20200": "2020",
-                    "20190": "2019",
-                    "20180": "2018",
-                    "20170": "2017",
-                    "20160": "2016",
-                    "20150": "2015",
-                    "20140": "2014",
-                    "20130": "2013",
-                    "20120": "2012",
-                    "20110": "2011",
-                    "20100": "2010",
-                    "20090": "2009",
-                    "20080": "2008",
-                    "20070": "2007",
-                    "20060": "2006",
-                    "20050": "2005",
-                    "20040": "2004",
-                    "20030": "2003",
-                    "20020": "2002",
-                    "20010": "2001",
-                    "20000": "2000",
-                }
-            if filename == slug_wilderness + "-rem-out-fin":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-in-fin":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            cut = in_shp.drop(columns=extra_cols).rename(index=str, columns=renames)
-            cut = cut[cut["geometry"].notna()]
-            out_shp = cut.to_crs(epsg=4326)
-            # out_shp.to_file(out_dir + filename + '.json', driver="GeoJSON")
-            # topojson.Topology(out_dir + filename + '.json', out_dir + filename + '.json.packed', quantization=1e6, simplify=0.0001)
-            try:
-                topo = topojson.Topology(out_shp, out_dir + filename + ".json.packed")
-                topo.to_json(out_dir + filename + ".json.packed")
-                # print(out_dir)
-                print(
-                    colorama.Fore.GREEN
-                    + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                    + colorama.Style.BRIGHT
-                    + " "
-                    + filename
-                    + ".json.packed created"
-                )
-                # quit()
-                if os.path.exists(out_dir + filename + ".json"):
-                    os.remove(out_dir + filename + ".json")
-            except Exception:
-                print(
-                    colorama.Fore.RED
-                    + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                    + colorama.Style.BRIGHT
-                    + " "
-                    + ashp
-                    + " topojson fail"
-                )
-                traceback.print_exc()
-                out_shp.to_file(out_dir + filename + ".json", driver="GeoJSON")
-                print(
-                    colorama.Fore.YELLOW
-                    + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                    + colorama.Style.BRIGHT
-                    + " "
-                    + filename
-                    + ".json created"
-                )
-
-    tails = ["", "-wcc", "-streams", "-lakes", "-rem-out-fin", "-rem-in-fin"]
-    shp_list = [slug_wilderness + s + ".shp" for s in tails]
-    in_dir = base_maps_dir + slug_wilderness + slash
-
-    for ashp in shp_list:
-        filename = os.path.splitext(ashp)[0]
-        if not os.path.exists(in_dir + ashp):
-            print(
-                colorama.Fore.WHITE
-                + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                + colorama.Style.NORMAL
-                + " "
-                + ashp
-                + " skipped"
-            )
-        else:
-            in_shp = geopandas.read_file(in_dir + ashp)
-            # in_shp['geometry'] = in_shp.geometry.apply(cast_to_multigeometry)
-            gdf_to_multigeometry(in_shp)
-            if filename == slug_wilderness:
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e
-                    not in [
-                        "WILDERNESS",
-                        "NAME",
-                        "DESIGNATED",
-                        "BASELINE",
-                        "UPDATED",
-                        "geometry",
-                    ]
-                ]
-                renames = {
-                    "WILDERNESS": "number",
-                    "NAME": "name",
-                    "DESIGNATED": "year_designated",
-                    "BASELINE": "year_baseline",
-                    "UPDATED": "updated",
-                }
-            if filename == slug_wilderness + "-wcc":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e
-                    not in [
-                        "WATERSHED_",
-                        "WATERSHE_1",
-                        "WATERSHE_2",
-                        "acres",
-                        "geometry",
-                    ]
-                ]
-                renames = {
-                    "WATERSHED_": "number",
-                    "WATERSHE_1": "name",
-                    "WATERSHE_2": "wcc",
-                }
-            if filename == slug_wilderness + "-streams":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e not in ["REACHCODE", "miles", "geometry"]
-                ]
-                renames = {
-                    "REACHCODE": "reachcode",
-                }
-            if filename == slug_wilderness + "-lakes":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["REACHCODE", "geometry"]
-                ]
-                renames = {
-                    "REACHCODE": "reachcode",
-                }
-            if filename == slug_wilderness + "-ntdep-grid":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e
-                    not in [
-                        "c",
-                        "20200",
-                        "20190",
-                        "20180",
-                        "20170",
-                        "20160",
-                        "20150",
-                        "20140",
-                        "20130",
-                        "20120",
-                        "20110",
-                        "20100",
-                        "20090",
-                        "20080",
-                        "20070",
-                        "20060",
-                        "20050",
-                        "20040",
-                        "20030",
-                        "20020",
-                        "20010",
-                        "20000",
-                        "y",
-                        "x",
-                        "m",
-                        "b",
-                        "endy",
-                        "p_value",
-                        "geometry",
-                    ]
-                ]
-                renames = {
-                    "20200": "2020",
-                    "20190": "2019",
-                    "20180": "2018",
-                    "20170": "2017",
-                    "20160": "2016",
-                    "20150": "2015",
-                    "20140": "2014",
-                    "20130": "2013",
-                    "20120": "2012",
-                    "20110": "2011",
-                    "20100": "2010",
-                    "20090": "2009",
-                    "20080": "2008",
-                    "20070": "2007",
-                    "20060": "2006",
-                    "20050": "2005",
-                    "20040": "2004",
-                    "20030": "2003",
-                    "20020": "2002",
-                    "20010": "2001",
-                    "20000": "2000",
-                }
-            if filename == slug_wilderness + "-stdep-grid":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e
-                    not in [
-                        "c",
-                        "20200",
-                        "20190",
-                        "20180",
-                        "20170",
-                        "20160",
-                        "20150",
-                        "20140",
-                        "20130",
-                        "20120",
-                        "20110",
-                        "20100",
-                        "20090",
-                        "20080",
-                        "20070",
-                        "20060",
-                        "20050",
-                        "20040",
-                        "20030",
-                        "20020",
-                        "20010",
-                        "20000",
-                        "y",
-                        "x",
-                        "m",
-                        "b",
-                        "endy",
-                        "p_value",
-                        "geometry",
-                    ]
-                ]
-                renames = {
-                    "20200": "2020",
-                    "20190": "2019",
-                    "20180": "2018",
-                    "20170": "2017",
-                    "20160": "2016",
-                    "20150": "2015",
-                    "20140": "2014",
-                    "20130": "2013",
-                    "20120": "2012",
-                    "20110": "2011",
-                    "20100": "2010",
-                    "20090": "2009",
-                    "20080": "2008",
-                    "20070": "2007",
-                    "20060": "2006",
-                    "20050": "2005",
-                    "20040": "2004",
-                    "20030": "2003",
-                    "20020": "2002",
-                    "20010": "2001",
-                    "20000": "2000",
-                }
-            if filename == slug_wilderness + "-rem-out-fin":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-in-fin":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            cut = in_shp.drop(columns=extra_cols).rename(index=str, columns=renames)
-            cut = cut[cut["geometry"].notna()]
-            out_shp = cut.to_crs(epsg=4326)
-            try:
-                # topojson.Topology(out_shp, out_dir + filename + '.json.packed')
-                topo = topojson.Topology(out_shp, out_dir + filename + ".json.packed")
-                topo.to_json(out_dir + filename + ".json.packed")
-                if os.path.exists(out_dir + filename + ".json"):
-                    os.remove(out_dir + filename + ".json")
-                print(
-                    colorama.Fore.GREEN
-                    + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                    + colorama.Style.BRIGHT
-                    + " "
-                    + filename
-                    + ".json.packed created"
-                )
-            except Exception:
-                print(
-                    colorama.Fore.RED
-                    + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                    + colorama.Style.BRIGHT
-                    + " "
-                    + ashp
-                    + " topojson fail"
-                )
-                traceback.print_exc()
-                out_shp.to_file(out_dir + filename + ".json", driver="GeoJSON")
-                print(
-                    colorama.Fore.GREEN
-                    + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                    + colorama.Style.BRIGHT
-                    + " "
-                    + filename
-                    + ".json created"
-                )
-
-
-def b_shps_to_geojsons_to_topojsons(which_wilderness):
-    slug_wilderness = slugify(which_wilderness)
-    out_dir = static_dir + "wcm" + slash + slug_wilderness + slash + "map" + slash
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-    tails = []
-    shp_list = [slug_wilderness + s + ".shp" for s in tails]
-    in_dir = base_dir + slug_wilderness + slash
-
-    for ashp in shp_list:
-        filename = os.path.splitext(ashp)[0]
-        if not os.path.exists(in_dir + ashp):
-            print(
-                colorama.Fore.WHITE
-                + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                + colorama.Style.NORMAL
-                + " "
-                + ashp
-                + " skipped"
-            )
-        else:
-            in_shp = geopandas.read_file(in_dir + ashp)
-            # in_shp['geometry'] = in_shp.geometry.apply(cast_to_multigeometry)
-            gdf_to_multigeometry(in_shp)
-            extra_cols = []
-            renames = {}
-            if filename == slug_wilderness:
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e not in ["WILDERNESS", "NAME", "geometry"]
-                ]
-                renames = {
-                    "WILDERNESS": "number",
-                    "NAME": "name",
-                }
-            if filename == slug_wilderness + "-streams-around":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e not in ["REACHCODE", "miles", "geometry"]
-                ]
-                renames = {
-                    "REACHCODE": "reachcode",
-                }
-            if filename == slug_wilderness + "-lakes-around":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["REACHCODE", "geometry"]
-                ]
-                renames = {
-                    "REACHCODE": "reachcode",
-                }
-            if filename == slug_wilderness + "-streamsb-around":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e not in ["REACHCODE", "miles", "geometry"]
-                ]
-                renames = {
-                    "REACHCODE": "reachcode",
-                }
-            if filename == slug_wilderness + "-lakesb-around":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["REACHCODE", "geometry"]
-                ]
-                renames = {
-                    "REACHCODE": "reachcode",
-                }
-            if filename == slug_wilderness + "-rem-in-roadcore2":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-out-roadcore2":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-in-devln":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-out-devln":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-in-devpt":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-out-devpt":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-in-devpl":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-out-devpl":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            cut = in_shp.drop(columns=extra_cols).rename(index=str, columns=renames)
-            cut = cut[cut["geometry"].notna()]
-            out_shp = cut.to_crs(epsg=4326)
-            # out_shp.to_file(out_dir + filename + '.json', driver="GeoJSON")
-            try:
-                topojson.Topology(out_shp, out_dir + filename + ".json.packed")
-                if os.path.exists(out_dir + filename + ".json"):
-                    os.remove(out_dir + filename + ".json")
-                print(
-                    colorama.Fore.GREEN
-                    + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                    + colorama.Style.BRIGHT
-                    + " "
-                    + filename
-                    + ".json.packed created"
-                )
-
-            except Exception:
-                print(
-                    colorama.Fore.RED
-                    + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                    + colorama.Style.BRIGHT
-                    + " "
-                    + ashp
-                    + " topojson fail"
-                )
-                traceback.print_exc()
-                out_shp.to_file(out_dir + filename + ".json", driver="GeoJSON")
-                print(
-                    colorama.Fore.GREEN
-                    + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                    + colorama.Style.BRIGHT
-                    + " "
-                    + filename
-                    + ".json created"
-                )
-
-    tails = [
-        "-streams-around",
-        "-lakes-around",
-        "-streamsb",
-        "-lakesb",
-        "-streamsb-around",
-        "-lakesb-around",
-        "-rem-in-roadcore2",
-        "-rem-out-roadcore2",
-        "-rem-in-devln",
-        "-rem-out-devln",
-        "-rem-in-devpt",
-        "-rem-out-devpt",
-        "-rem-in-devpl",
-        "-rem-out-devpl",
-    ]
-    shp_list = [slug_wilderness + s + ".shp" for s in tails]
-    in_dir = base_maps_dir + slug_wilderness + slash
-
-    # print(shp_list)
-
-    for ashp in shp_list:
-        filename = os.path.splitext(ashp)[0]
-        if not os.path.exists(in_dir + ashp):
-            print(
-                colorama.Fore.WHITE
-                + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                + colorama.Style.NORMAL
-                + " "
-                + ashp
-                + " skipped"
-            )
-        else:
-            # print('------------------')
-            # print(ashp)
-            in_shp = geopandas.read_file(in_dir + ashp)
-            # print(in_shp.geometry)
-            # in_shp['geometry'] = in_shp.geometry.apply(cast_to_multigeometry)
-            gdf_to_multigeometry(in_shp)
-            extra_cols = []
-            renames = {}
-            if filename == slug_wilderness:
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e not in ["WILDERNESS", "NAME", "geometry"]
-                ]
-                renames = {
-                    "WILDERNESS": "number",
-                    "NAME": "name",
-                }
-            if filename == slug_wilderness + "-streams-around":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e not in ["REACHCODE", "miles", "geometry"]
-                ]
-                renames = {
-                    "REACHCODE": "reachcode",
-                }
-            if filename == slug_wilderness + "-lakes-around":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["REACHCODE", "geometry"]
-                ]
-                renames = {
-                    "REACHCODE": "reachcode",
-                }
-            if filename == slug_wilderness + "-streamsb-around":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e not in ["REACHCODE", "miles", "geometry"]
-                ]
-                renames = {
-                    "REACHCODE": "reachcode",
-                }
-            if filename == slug_wilderness + "-lakesb-around":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["REACHCODE", "geometry"]
-                ]
-                renames = {
-                    "REACHCODE": "reachcode",
-                }
-            if filename == slug_wilderness + "-rem-in-roadcore2":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e not in ["NAME_1", "GLOBALID", "acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-out-roadcore2":
-                extra_cols = [
-                    e
-                    for e in in_shp.columns
-                    if e not in ["NAME_1", "GLOBALID", "acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-in-devln":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-out-devln":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-in-devpt":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-out-devpt":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-in-devpl":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            if filename == slug_wilderness + "-rem-out-devpl":
-                extra_cols = [
-                    e for e in in_shp.columns if e not in ["acres", "geometry"]
-                ]
-                renames = {}
-            # print(in_shp.geometry)
-            # in_shp.to_file(out_dir + 'test.json', driver="GeoJSON")
-            cut = in_shp.drop(columns=extra_cols).rename(index=str, columns=renames)
-            cut = cut[cut["geometry"].notna()]
-            # print(cut.geometry)
-            if cut.crs is None:
-                cut.crs = "EPSG:4269"
-            out_shp = cut.to_crs(epsg=4326)
-            # print(ashp)
-            # out_shp = out_shp.reset_index()
-            # print(out_shp.head)
-            if out_shp.empty:
-                print(
-                    colorama.Fore.CYAN
-                    + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                    + colorama.Style.BRIGHT
-                    + " "
-                    + filename
-                    + " empty"
-                )
-            else:
-                # from shapely import wkt
-                # out_shp['geometry'] = out_shp['geometry'].astype(str).apply(wkt.loads)
-                # out_shp['valid'] = out_shp.is_valid
-                # out_shp = out_shp.reset_index()
-                # print(out_shp.head)
-                # out_shp2 = out_shp.sort_index().explode()
-                # out_shp2 = out_shp.reset_index(drop=True).explode()
-                # out_shp2 = out_shp.reset_index(level=[0]).explode()
-                # print(out_shp2.head)
-                # out_shp.to_file(out_dir + 'test.' + out_ext, driver=out_driver)
-                print(filename)
-                topojson.Topology(out_shp, out_dir + filename + ".json.packed")
-                try:
-                    topojson.Topology(
-                        out_shp, out_dir + filename + ".json.packed"
-                    )  # crashy numpy dup check
-                    if os.path.exists(out_dir + filename + ".json"):
-                        os.remove(out_dir + filename + ".json")
-                    print(
-                        colorama.Fore.GREEN
-                        + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                        + colorama.Style.BRIGHT
-                        + " "
-                        + filename
-                        + ".json.packed writing"
-                    )
-
-                except Exception:
-                    print(
-                        colorama.Fore.RED
-                        + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                        + colorama.Style.BRIGHT
-                        + " "
-                        + ashp
-                        + " topojson fail"
-                    )
-                    traceback.print_exc()
-                    out_shp.to_file(out_dir + filename + ".json", driver="GeoJSON")
-                    print(
-                        colorama.Fore.YELLOW
-                        + str(datetime.now().strftime("%Y%m%d_%H%M"))
-                        + colorama.Style.BRIGHT
-                        + " "
-                        + filename
-                        + ".json writing"
-                    )
-
-
 def collect_downloads_nwps(
     which_wilderness,
 ):  # collect files for wilderness baseline page
     slug_wilderness = slugify(which_wilderness[2])
     slug_agency = slugify(which_wilderness[1])
     source_dir = base_dir + slug_agency + slash + slug_wilderness + slash
-
     out_dir = static_dir + "wcm" + slash + slug_agency + slash + slug_wilderness + slash
+
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     vis_csvs = [
@@ -1540,6 +710,29 @@ def collect_downloads_nwps(
             "-mapw-terrain-sf.png",
         ]
     )
+    file_list.extend(
+        [
+            "_devpt.json",
+            "_devpl.json",
+            "_devln.json",
+            "_roadcore2.json",
+            "_trails.json",
+        ]
+    )
+    file_list.append("-rem-in-roadcore2.json")
+    file_list.append("-rem-in-trails.json")
+    file_list.append("-rem-in-devln.json")
+    file_list.append("-rem-in-devpl.json")
+    file_list.append("-rem-in-devpt.json")
+    file_list.append("-rem-out-roadcore2.json")
+    file_list.append("-rem-out-trails.json")
+    file_list.append("-rem-out-devln.json")
+    file_list.append("-rem-out-devpl.json")
+    file_list.append("-rem-out-devpt.json")
+
+    for file in file_list:
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(out_dir + slug_wilderness + file)
     for file in file_list:
         if not os.path.exists(source_dir + slug_wilderness + file):
             print(
@@ -1566,7 +759,7 @@ def collect_downloads_nwps(
             )
 
     for file in os.listdir(source_dir):
-        if "-lichen-n-qq-" in file:
+        if "-lichen-n-qq-" in file or "-lichen-s-qq-" in file :
             print(
                 colorama.Fore.GREEN
                 + str(datetime.now().strftime("%Y%m%d_%H%M"))
@@ -1577,13 +770,74 @@ def collect_downloads_nwps(
             )
             copyfile(source_dir + file, out_dir + file)
 
+def collect_uploads_nwps(
+    which_wilderness,
+):  # collect new files from cda_output to cda_upload
+    slug_wilderness = slugify(which_wilderness[2])
+    slug_agency = slugify(which_wilderness[1])
+    source_dir = base_dir + slug_agency + slash + slug_wilderness + slash
+    astatic_dir = static_dir + "wcm" + slash + slug_agency + slash + slug_wilderness + slash
+    out_dir = upload_dir + "togo" + slash + slug_agency + slash + slug_wilderness + slash
+
+    if os.path.exists(out_dir):
+        #os.remove(out_dir)
+        rmtree(out_dir, ignore_errors=True)
+        print("removed " + out_dir)
+    os.makedirs(out_dir)
+    print("created " + out_dir)
+    #copyfile(source_dir + file, out_dir + file)
+
+    print("reading " + source_dir)
+
+    range_start = datetime.timestamp(datetime(2024, 1, 12, 23, 55, 59, 0))   #1st Jul 2020 11:55:59PM to..
+    range_end = datetime.timestamp(datetime(2024, 1, 14, 23, 55, 59, 0))    #10th Aug 2021 11:55:59PM
+
+    dnow = datetime.now()
+    dthen = datetime.now() - timedelta(hours=10, minutes=1)
+
+    range_start = datetime.timestamp(dthen)
+    range_end = datetime.timestamp(dnow)
+
+    dfs = [
+        #os.path.join(root, name)
+        name
+        for root, dirs, files in os.walk(astatic_dir)
+        for name in files
+    ]
+    #df = pandas.DataFrame({"filename": dfs})
+    #print(df.head)
+
+    filenames = os.listdir(source_dir)
+    #df2 = pandas.DataFrame({"filename": filenames})
+    #print(df2.head)
+    filenames = set(filenames).intersection(dfs)
+
+    #filepaths = [os.path.join(source_dir, file) for file in os.listdir(source_dir)]
+    print(len(filenames))
+    #filepaths = [os.path.join(source_dir, file) for file in filenames if os.path.getctime(os.path.join(source_dir, file)) > range_start and os.path.getctime(os.path.join(source_dir, file)) < range_end]
+    filepaths = [file for file in filenames if os.path.getctime(os.path.join(source_dir, file)) > range_start and os.path.getctime(os.path.join(source_dir, file)) < range_end]
+    print(len(filepaths))
+    print(filepaths)
+
+    for file in filepaths:
+        print(
+            colorama.Fore.GREEN
+            + str(datetime.now().strftime("%Y%m%d_%H%M"))
+            + colorama.Style.BRIGHT
+            + " "
+            + file
+            + " writing"
+        )
+        copyfile(source_dir + file, out_dir + file)
+    copyfile(astatic_dir + 'index.html', out_dir + 'index.html')
+
 
 def build_wcm_baseline_nwps(which_wilderness):  # build baseline page for a wilderness
     slug_wilderness = slugify(which_wilderness[2])
     slug_agency = slugify(which_wilderness[1])
     source_dir = base_dir + slug_agency + slash + slug_wilderness + slash
+    out_dir = static_dir + "wcm" + slash + slug_agency + slash + slug_wilderness + slash
 
-    out_dir = static_dir + "wcm" + slash + slug_wilderness + slash
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     vis_csvs = [
@@ -1651,8 +905,83 @@ def build_wcm_baseline_nwps(which_wilderness):  # build baseline page for a wild
         ]
     )
     file_list.extend(
+        [
+            "_devpt.json",
+            "_devpl.json",
+            "_devln.json",
+            "_roadcore2.json",
+            "_trails.json",
+        ]
+    )
+    file_list.extend(
         ["-wetdep-n.png", "-wetdep-n.csv", "-wetdep-s.png", "-wetdep-s.csv"]
     )
+    file_list.append("-rem-in-roadcore2.json")
+    file_list.append("-rem-in-trails.json")
+    file_list.append("-rem-in-devln.json")
+    file_list.append("-rem-in-devpl.json")
+    file_list.append("-rem-in-devpt.json")
+    file_list.append("-rem-out-roadcore2.json")
+    file_list.append("-rem-out-trails.json")
+    file_list.append("-rem-out-devln.json")
+    file_list.append("-rem-out-devpl.json")
+    file_list.append("-rem-out-devpt.json")
+
+    devx_list = ["roadcore2", "trails", "devln", "devpl", "devpt"]
+    ios = ["in", "out"]
+    for io in ios:
+        for dev_layer in devx_list:
+            awilderness_devx_file = source_dir + slug_wilderness + "-rem-" + io + "-" + dev_layer + "." + out_ext
+            print(awilderness_devx_file)
+            if not os.path.exists(awilderness_devx_file):
+                log(slug_wilderness, slug_agency, "RED", slug_wilderness + "-rem-" + io + "-" + dev_layer + " empty")
+            else:
+                awilderness_devx = geopandas.read_file(awilderness_devx_file)
+                print(awilderness_devx.head)
+                #quit()
+                if awilderness_devx.empty:
+                    with uopen(empty_file_out, "a"):
+                        os.utime(empty_file_out, None)
+                    log(slug_wilderness, slug_agency, "YELLOW", io + "-" + dev_layer + " empty")
+                else:
+                    devx_extra_cols = [
+                        "SHAPE_Area",
+                        "SHAPE_Length",
+                        "id",
+                        "name",
+                        "acreage",
+                        "dd",
+                        "a",
+                        "WILDERNESS",
+                        "WILDERNE_1",
+                        "AREAID",
+                        "BOUNDARYST",
+                        "GIS_ACRES",
+                        "WID",
+                        "index_right",
+                    ]
+                    extra_cols = [
+                        e for e in awilderness_devx.columns if e in devx_extra_cols
+                    ]
+                    awilderness_devx = awilderness_devx.drop(columns=extra_cols)
+                    with uopen(
+                        out_dir + slug_wilderness + "-rem-" + io + "-" + dev_layer + ".json", "w"
+                    ) as wg:
+                        wg.write(awilderness_devx.to_json())
+                    with uopen(out_dir + slug_wilderness + "-rem-" + io + "-" + dev_layer + ".json") as wg:
+                        wj = json.load(wg)
+                        topology_ = topology.Topology()
+                        topo = topology_({dev_layer: wj})
+                        topov = str(topo).replace("'", '"').replace(": None", ": null")
+                    with uopen(
+                        out_dir + slug_wilderness + "-rem-" + io + "-" + dev_layer + ".json" + ".packed", "w"
+                    ) as static_file:
+                        static_file.write(str(topov))
+                    log(
+                        None, None, "GREEN", slug_wilderness + "-rem-" + io + "-" + dev_layer + ".json written"
+                    )
+
+
     ntdep_ext = "-ntdep-graph-extended.png"
     stdep_ext = "-stdep-graph-extended.png"
     vis_ext = "-visibility-graph-extended.png"
@@ -1860,15 +1189,20 @@ def build_wcm_baseline_nwps(which_wilderness):  # build baseline page for a wild
             slug_wilderness + "-lichen-plots.csv does not exist",
         )
         context.update({"lichen_plots": []})
+        context.update({"lichen_n": None})
+        context.update({"lichen_s": None})
     else:
         w_plots = pandas.read_csv(source_dir + slug_wilderness + "-lichen-plots.csv")
+        w_plots = w_plots.fillna("NaN")
+        print('w_plots.head')
+        print(w_plots.head)
         # w_plot_list = df[companies_column].tolist()
         w_plot_list = w_plots.reset_index().values.tolist()
         context.update({"lichen_plots": w_plot_list})
         print(w_plot_list)
         # quit()
         try:
-            with uopen(source_dir + "index-lichen-N.json") as jsf:
+            with uopen(source_dir + slug_wilderness + "-lichen-n.json") as jsf:
                 data = json.load(jsf)
                 context.update({"lichen_n": data})
         except FileNotFoundError:
@@ -1876,7 +1210,7 @@ def build_wcm_baseline_nwps(which_wilderness):  # build baseline page for a wild
                 slug_wilderness,
                 slug_agency,
                 "RED",
-                "index-lichen-N.json does not exist",
+                slug_wilderness + "-lichen-n.json does not exist",
             )
             context.update({"lichen_n": None})
         try:
@@ -1895,7 +1229,7 @@ def build_wcm_baseline_nwps(which_wilderness):  # build baseline page for a wild
             )
             context.update({"lichen_n_table": None})
         try:
-            with uopen(source_dir + "index-lichen-S.json") as jsf:
+            with uopen(source_dir + slug_wilderness + "-lichen-n.json") as jsf:
                 data = json.load(jsf)
                 context.update({"lichen_s": data})
         except FileNotFoundError:
@@ -1903,7 +1237,7 @@ def build_wcm_baseline_nwps(which_wilderness):  # build baseline page for a wild
                 slug_wilderness,
                 slug_agency,
                 "RED",
-                "index-lichen-S.json does not exist",
+                slug_wilderness + "-lichen-s.json does not exist",
             )
             context.update({"lichen_s": None})
         try:
@@ -1921,6 +1255,166 @@ def build_wcm_baseline_nwps(which_wilderness):  # build baseline page for a wild
                 "index-lichen-S-table.json does not exist",
             )
             context.update({"lichen_s_table": None})
+
+    devjsons = []
+    if not os.path.exists(source_dir + slug_wilderness + "_devpt.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            slug_wilderness + "_devpt.json does not exist",
+        )
+    else:
+        try:
+            devjsons.extend([slug_wilderness + "_devpt.json"])
+        except FileNotFoundError:
+            pass
+    if not os.path.exists(source_dir + slug_wilderness + "_devpl.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            slug_wilderness + "_devpl.json does not exist",
+        )
+    else:
+        try:
+            devjsons.extend([slug_wilderness + "_devpl.json"])
+        except FileNotFoundError:
+            pass
+    if not os.path.exists(source_dir + slug_wilderness + "_devln.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            slug_wilderness + "_devln.json does not exist",
+        )
+    else:
+        try:
+            devjsons.extend([slug_wilderness + "_devln.json"])
+        except FileNotFoundError:
+            pass
+    if not os.path.exists(source_dir + slug_wilderness + "_roadcore2.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            slug_wilderness + "_roadcore2.json does not exist",
+        )
+    else:
+        try:
+            devjsons.extend([slug_wilderness + "_roadcore2.json"])
+        except FileNotFoundError:
+            pass
+    if not os.path.exists(source_dir + slug_wilderness + "_trails.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            slug_wilderness + "_trails.json does not exist",
+        )
+    else:
+        try:
+            devjsons.extend([slug_wilderness + "_trails.json"])
+        except FileNotFoundError:
+            pass
+    context.update({"devjsons": devjsons})
+
+    devjsons_out = []
+    if not os.path.exists(out_dir + slug_wilderness + "-rem-out-devpt.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            out_dir + slug_wilderness + "-rem-out-devpt.json does not exist",
+        )
+    else:
+        devjsons_out.extend([slug_wilderness + "-rem-out-devpt.json"])
+    if not os.path.exists(out_dir + slug_wilderness + "-rem-out-devpl.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            out_dir + slug_wilderness + "-rem-out-devpl.json does not exist",
+        )
+    else:
+        devjsons_out.extend([slug_wilderness + "-rem-out-devpl.json"])
+    if not os.path.exists(out_dir + slug_wilderness + "-rem-out-devln.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            out_dir + slug_wilderness + "-rem-out-devln.json does not exist",
+        )
+    else:
+        devjsons_out.extend([slug_wilderness + "-rem-out-devln.json"])
+    if not os.path.exists(out_dir + slug_wilderness + "-rem-out-roadcore2.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            out_dir + slug_wilderness + "-rem-out-roadcore2.json does not exist",
+        )
+    else:
+        devjsons_out.extend([slug_wilderness + "-rem-out-roadcore2.json"])
+    if not os.path.exists(out_dir + slug_wilderness + "-rem-out-trails.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            out_dir + slug_wilderness + "-rem-out-trails.json does not exist",
+        )
+    else:
+        devjsons_out.extend([slug_wilderness + "-rem-out-trails.json"])
+    context.update({"devjsons_out": devjsons_out})
+
+    devjsons_in = []
+    if not os.path.exists(out_dir + slug_wilderness + "-rem-in-devpt.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            out_dir + slug_wilderness + "-rem-in-devpt.json does not exist",
+        )
+    else:
+        devjsons_in.extend([slug_wilderness + "-rem-in-devpt.json"])
+    if not os.path.exists(out_dir + slug_wilderness + "-rem-in-devpl.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            out_dir + slug_wilderness + "-rem-in-devpl.json does not exist",
+        )
+    else:
+        devjsons_in.extend([slug_wilderness + "-rem-in-devpl.json"])
+    if not os.path.exists(out_dir + slug_wilderness + "-rem-in-devln.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            out_dir + slug_wilderness + "-rem-in-devln.json does not exist",
+        )
+    else:
+        devjsons_in.extend([slug_wilderness + "-rem-in-devln.json"])
+    if not os.path.exists(out_dir + slug_wilderness + "-rem-in-roadcore2.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            out_dir + slug_wilderness + "-rem-in-roadcore2.json does not exist",
+        )
+    else:
+        devjsons_in.extend([slug_wilderness + "-rem-in-roadcore2.json"])
+    if not os.path.exists(out_dir + slug_wilderness + "-rem-in-trails.json"):
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            out_dir + slug_wilderness + "-rem-in-trails.json does not exist",
+        )
+    else:
+        devjsons_in.extend([slug_wilderness + "-rem-in-trails.json"])
+    context.update({"devjsons_in": devjsons_in})
+
     try:
         with uopen(source_dir + "index-wetdep-n.json") as jsf:
             data = json.load(jsf)
@@ -1946,6 +1440,11 @@ def build_wcm_baseline_nwps(which_wilderness):  # build baseline page for a wild
         release_month = "May 2021"
         context.update({"wilderness": data})
     print(context)
+
+    with open(out_dir + "index-measures.json", "w") as pf:
+        #for obj in context:
+        pf.write(json.dumps(context))
+
     template = get_template("build_wcm_baseline.html")
     content = template.render(context)
     with uopen(out_dir + "index.html", "w") as static_file:
@@ -2000,11 +1499,10 @@ def build_index_():  # build wcm index page
         "rev_date": rev_date,
         "wilderness_count": "447",
         "to_date": "2015",
-        "admin_email": "admin@wilderness.ordvac.com",
+        "admin_email": "",
     }
     template = get_template("build_index.html")
     content = template.render(context)
-    print("ok")
     with uopen(out_dir + "index.html", "w") as static_file:
         static_file.write(content)
     template = get_template("build_index.js")
@@ -2025,60 +1523,82 @@ class reversor:
 
 
 def build_index(req_list):  # build another wcm index page
-    out_dir = static_dir + "wcm" + slash
+    out_dir = upload_dir
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
+    if not os.path.exists(out_dir + "togo"):
+        os.makedirs(out_dir + "togo")
     rev_date = str(datetime.now().strftime("%Y%m%d_%H%M"))
     r_list = []
+    mjson_objects = []
+    req_list.sort(key=operator.itemgetter(0), reverse=True)
     for r in req_list:
-        r.insert(2, slugify(r[1]))
-        r = [w.replace(" Wilderness", "") for w in r]
+        r.insert(1, slugify(r[1]))
+        r.insert(2, slugify(r[3]))
+        #r = [w.replace(" Wilderness", "") for w in r]
         r_list.append(r)
+        #print(r)
+        json_measures = static_dir + "wcm" + slash + r[1] + slash + r[2] + slash + "index-measures.json"
+        #print(json_measures)
+        with uopen(json_measures) as wmj:
+            wm = json.load(wmj)
+            wm.update({"req_date": r[0]})
+            if wm["lichen_n"]:
+                key_list = ["first_round", "last_round", "trend"]
+                ln =[{k: d[k] for k in key_list} for d in wm["lichen_n"] if all(k in d for k in key_list)]
+                fi = min(ln, key=lambda x:x['first_round'])['first_round']
+                la = max(ln, key=lambda x:x['last_round'])['last_round']
+                conditions = {'first_round': fi, 'last_round': la}
+                tr = [d for d in ln if all((k in d and d[k] == v) for k, v in conditions.items())]
+                if len(tr) == 1:
+                    print(tr[0]['trend'])
+                    wm.update({"ln_trend": tr[0]['trend']})
+                else:
+                    print("multiple trends")
+                    wm.update({"ln_trend": "multiple trends"})
+            if wm["lichen_s"]:
+                key_list = ["first_round", "last_round", "trend"]
+                ls =[{k: d[k] for k in key_list} for d in wm["lichen_s"] if all(k in d for k in key_list)]
+                fi = min(ln, key=lambda x:x['first_round'])['first_round']
+                la = max(ln, key=lambda x:x['last_round'])['last_round']
+                conditions = {'first_round': fi, 'last_round': la}
+                tr = [d for d in ls if all((k in d and d[k] == v) for k, v in conditions.items())]
+                if len(tr) == 1:
+                    print(tr[0]['trend'])
+                    wm.update({"ls_trend": tr[0]['trend']})
+                else:
+                    print("multiple trends")
+                    wm.update({"ls_trend": "multiple trends"})
+            mjson_objects.append(wm)
+        #print(wm)
+        #quit()
+
+    with open(static_dir + "wcm" + slash + "index-wcm-measures.json", "w", encoding='utf-8') as outfile:
+        json.dump(mjson_objects, outfile, ensure_ascii=False, indent=4)
+        print('measures json written')
+
     req_list = sorted(r_list, key=lambda y: (reversor(y[0]), y[1].lower()))
     ask_list = [x for x in req_list if x[0] != ""]
     add_list = [x for x in req_list if x[0] == ""]
     add_list.extend(ask_list)
 
-    top_list = [
-        ["", "", "Automatic Writing"],
-        ["", "", "A Child's Garden of State-Sponsored Parking Lot Demographics"],
-        ["", "", "Landscape Ontology"],
-        ["", "", "Timelines and Regional Trends"],
-        ["2023-08-14", "water/fs", "Impaired Waters in ____ Wilderness"],
-        ["2023-02-28", "annotated", "Illuminated Manuscripts"],
-        ["2023-01-29", "topics/ozone-generator", "Ozone Trend Generator"],
-        ["2023-01-18", "topics/mapping-water-quality", "Mapping Water Quality"],
-        [
-            "2023-01-06",
-            "topics/lichen-trending",
-            "Air Quality Trends from Lichen Sampling",
-        ],
-        ["2022-12-27", "topics/best-and-nearest", "Best and Nearest"],
-        ["2022-12-21", "topics/wilderness-by-area", "Wilderness by Area"],
-        ["2022-12-18", "wcmd", "A Wilderness Character Database"],
-        [
-            "2022-12-04",
-            "topics/measures-scores-and-trends",
-            "Measures, Scores, and Trends",
-        ],
-        [
-            "2022-11-30",
-            "topics/mktest",
-            "Mann-Kendall Test vs Ordinary Linear Regression",
-        ],
-    ]
-
     context = {
+        "domain": domain,
+        "admin_email": admin_email,
         "top_list": top_list,
         "req_list": add_list,
+        "measures": mjson_objects,
         "rev_date": rev_date,
         "wilderness_count": "447",
         "to_date": "2023",
-        "admin_email": "admin@wilderness.ordvac.com",
     }
+
+    template = get_template("build_togo.html")
+    content = template.render(context)
+    with uopen(out_dir + 'togo' + slash + "index.html", "w") as static_file:
+        static_file.write(content)
     template = get_template("build_index.html")
     content = template.render(context)
-    print("ok")
     with uopen(out_dir + "index.html", "w") as static_file:
         static_file.write(content)
     template = get_template("build_index.js")
@@ -2100,7 +1620,7 @@ def build_impaired_dirs_nwps(req_list):  # build imapired waters pages
         print(r)
 
         context = {
-            "admin_email": "admin@wilderness.ordvac.com",
+            "admin_email": "",
         }
         source_dir = base_dir + r[4] + slash + r[2] + slash
         out_dir = static_dir + "water_json" + slash + r[4] + slash + r[2] + slash
@@ -2172,7 +1692,7 @@ def build_lichen_dirs_nwps(req_list):  # build lichen pages
         print(r)
 
         context = {
-            "admin_email": "admin@wilderness.ordvac.com",
+            "admin_email": "",
         }
         source_dir = base_dir + r[2] + slash + r[4] + slash
         out_dir = static_dir + "lichen_html" + slash + r[2] + slash + r[4] + slash
@@ -2185,7 +1705,10 @@ def build_lichen_dirs_nwps(req_list):  # build lichen pages
         file_list.append("index-wilderness.json")
 
         for file in file_list:
-            copyfile(source_dir + file, out_dir + file)
+            try:
+                copyfile(source_dir + file, out_dir + file)
+            except FileNotFoundError:
+                log(r[4], r[2], "RED", "file not found " + file)
 
         template = get_template("lichen.html")
         content = template.render(context)
@@ -2218,7 +1741,7 @@ def build_water(req_list):  # build another wcm index page
         "rev_date": rev_date,
         "wilderness_count": "447",
         "to_date": "2023",
-        "admin_email": "admin@wilderness.ordvac.com",
+        "admin_email": "",
     }
     template = get_template("water.html")
     content = template.render(context)
@@ -2401,3 +1924,218 @@ def get_visibility():
 def get_lichen():
     # geiser box is invitation only
     pass
+
+def export_to_import():
+    wcmd_csv = data_dir + slash + "_wcmd" + slash + "WildernessCharacterMonitoring_Export_11-08-2023_MultipleWildernessAreas.csv"
+    wcmd_df = pandas.read_csv(wcmd_csv)
+    a = wcmd_df["AgencyCode"].unique()
+    renames = {
+        "AgencyCode": "Agency",
+    }
+    wcmd_df = wcmd_df.rename(index=str, columns=renames)
+    wcmd_df["agency"] = wcmd_df.apply(get_agency, axis=1)
+
+    to_json = 1
+    if to_json:
+        wcmd_cols = ['Wilderness', 'Quality', 'Indicator', 'Measure', 'Active?', 'Measure Baseline Year', 'Measure Comments', 'Data Type (DT)', 'DT Category Ranks', 'Upward Data Trend Direction', 'Significant Change Type', 'Agency', 'Units', 'Value', 'Measure Value (Rolling Means)', 'Year Measured', 'SC Categories', 'ValueComment', 'Condition', 'Condition Comment', 'Data Adequacy', 'Data Adequacy Comment', 'Trend', 'Trend Comment', 'Entered Date', 'Entered By', 'Edited Date', 'Edited By', 'agency']
+        q_u = wcmd_df.groupby('Quality').sum()
+        qqi_u = wcmd_df.groupby('Indicator').sum()
+        qqim_u = wcmd_df.groupby('Measure').sum()
+        print(q_u.head)
+        print(qqi_u.head)
+        print(qqim_u.head)
+        q_df = wcmd_df['Quality'].drop_duplicates().sort_values()
+        qqi_df = wcmd_df['Indicator'].drop_duplicates().sort_values()
+        qqim_df = wcmd_df['Measure'].drop_duplicates().sort_values()
+        print(q_df)
+        print(qqi_df)
+        print(qqim_df)
+        #qim_df = wcmd_df[['Quality', 'Indicator', 'Measure']].drop_duplicates().sort_values(['Quality', 'Indicator', 'Measure'])
+        #qim_df = wcmd_df.groupby[['Quality', 'Indicator', 'Measure']].agg().drop_duplicates().sort_values(['Quality', 'Indicator', 'Measure'])
+        #qim_df = (
+            #wcmd_df.groupby(by=['Quality', 'Indicator', 'Measure'])
+            #.agg({'Agency': 'count', 'Wilderness': 'count'})
+            #.pipe(lambda x: x.set_axis(x.columns.map('_'.join), axis=1))
+        #)
+        qimaw_df = wcmd_df[['Quality', 'Indicator', 'Measure', 'Agency', 'Wilderness']]
+        print(qimaw_df)
+        print('qimaw subset: ' + str(len(qimaw_df)))
+        qimaw_df.to_json(base_dir + "_wcmd_qimaw_2023-11-08.json", orient="records")
+
+        qimawu_df = wcmd_df[['Quality', 'Indicator', 'Measure', 'Agency', 'Wilderness']].drop_duplicates()
+        print(qimawu_df)
+        print('qimaw uniques: ' + str(len(qimawu_df)))
+        qimawu_df.to_json(base_dir + "_wcmd_qimawu_2023-11-08.json", orient="records")
+
+        qim_df = qimawu_df.groupby(['Quality', 'Indicator', 'Measure'], as_index=False)[['Agency','Wilderness']].agg(lambda x: list(x))#.agg({'Agency': 'count', 'Wilderness': 'count'})
+        print(qim_df)
+        print('qimaw listed: ' + str(len(qim_df)))
+        qim_df.to_json(base_dir + "_wcmd_qim_2023-11-08.json", orient="records")
+
+        quit()
+
+        wcmd_df["qqim"] = wcmd_df.apply(get_qqim_from_measure, axis=1)
+        wcmd_df["qqi"] = wcmd_df.apply(get_qqi_from_indicator, axis=1)
+        wcmd_df["qq"] = wcmd_df.apply(get_qq_from_indicator, axis=1)
+        wcmd_df["q"] = wcmd_df.apply(get_q_from_quality, axis=1)
+
+        wcmd_df.to_json(base_dir + "_wcmd_2023-11-08.json", orient="records")
+        quit()
+
+        wcmd_df = wcmd_df.drop(columns=["agency"])
+        wcmd_df["a"] = wcmd_df["Agency"]
+        nwps_geojson = base_dir + "_nwps-2022-12-16.geojson"
+        nwps_gdf = nwps_gdf.drop(
+            columns=[]
+        )
+        nwps_gdf.to_file(nwps_geojson, driver="GeoJSON", index=False)
+        # topo = topojson.Topology(wilderness_fixture, wilderness_fixture + '.packed', quantization=1e6, simplify=0.0001)
+        with uopen(nwps_geojson) as wg:
+            wj = json.load(wg)
+        topo = topojson.Topology(wj, nwps_geojson + ".packed")
+        with uopen(nwps_geojson + ".packed", "w") as static_file:
+            static_file.write(str(topo))
+        quit()
+
+    nwps_gdf["wkt"] = nwps_gdf.geometry.to_wkt()
+    # print(nwps_gdf.crs)
+    srid = "SRID=4326;"
+    nwps_df = pandas.DataFrame(nwps_gdf)
+    # nwps_dfc = nwps_df.stack().reset_index()
+    print(nwps_df.head)
+    print(nwps_df.columns)
+    # nwps_dfc = nwps_dfc.sort_values('name', ascending=False)
+    # nwps_df.to_csv(base_dir + '_nwps_up-2022-12-16.csv')
+    # quit()
+
+    nwps_df.insert(0, "id", range(1, 1 + len(nwps_df)))
+    nwps_df["geom"] = srid + nwps_df["wkt"]
+    nwps_df["created"] = "2022-12-15 15:35:55"
+    nwps_df["modified"] = "2022-12-15 15:35:55"
+    nwps_df["author"] = 1
+    nwps_df["name"] = nwps_df["name"].str.replace(" Wilderness", "")
+    nwps_df["designation_date"] = nwps_df.apply(get_date_from_dyear, axis=1)
+    nwps_df["delist_date"] = ""
+    nwps_df["remarks"] = ""
+
+    print(nwps_df.head)
+
+    # nwps_df.to_json(base_dir + '_junk-2022-12-16.json', orient='records')
+    # dups = nwps_df[nwps_df['unique'] == 'False']
+    # print(dups.head)
+    # quit()
+
+    nwps_df["slug"] = nwps_df.apply(get_slug, axis=1)
+    nwps_df = nwps_df.drop(columns=["wkt", "geometry", "Designated"])
+    nwps_df = nwps_df[
+        [
+            "id",
+            "created",
+            "modified",
+            "author",
+            "name",
+            "slug",
+            "designation_date",
+            "remarks",
+            "state",
+            "comment",
+            "acreage",
+            "description",
+            "agency",
+            "geom",
+        ]
+    ]
+    print(nwps_df.head)
+    print(nwps_df.columns)
+    cut_json = 1
+    if cut_json:
+        cut1 = nwps_df[:200]
+        print(cut1.head)
+        cut2 = nwps_df[200:400]
+        print(cut2.head)
+        cut3 = nwps_df[400:500]
+        print(cut3.head)
+        cut4 = nwps_df[500:600]
+        print(cut4.head)
+        cut5 = nwps_df[600:700]
+        print(cut5.head)
+        cut6 = nwps_df[700:800]
+        print(cut6.head)
+        cut7 = nwps_df[800:900]
+        print(cut7.head)
+        # cut8 = nwps_df[800:]
+        # print(cut8.head)
+        cut1.to_json(base_dir + "_nwps_up1-2022-12-16.json", orient="records")
+        cut2.to_json(base_dir + "_nwps_up2-2022-12-16.json", orient="records")
+        cut3.to_json(base_dir + "_nwps_up3-2022-12-16.json", orient="records")
+        cut4.to_json(base_dir + "_nwps_up4-2022-12-16.json", orient="records")
+        cut5.to_json(base_dir + "_nwps_up5-2022-12-16.json", orient="records")
+        cut6.to_json(base_dir + "_nwps_up6-2022-12-16.json", orient="records")
+        cut7.to_json(base_dir + "_nwps_up7-2022-12-16.json", orient="records")
+        # cut8.to_json(base_dir + '_nwps_up8-2022-12-16.json', orient='records')
+    nwps_df.to_json(base_dir + "_nwps_up-2022-12-16.json", orient="records")
+    # with uopen(nwps_json , 'w') as file:
+    #    file.write(nwps_df.to_json())
+
+    # nwps_df = nwps_df[['id','created','modified','author','name','slug','designation_date','remarks','state','comment','acreage','description','agency','geom']]
+    # topo = topojson.Topology(out_shp, out_dir + filename + '.json.packed')
+    # topo.to_json(out_dir + filename + '.json.packed')
+
+    # topo = topojson.Topology(wilderness_fixture, wilderness_fixture + '.packed', quantization=1e6, simplify=0.0001)
+    quit()
+
+    wilderness_fixture = base_dir + "_wilderness_areas-2022-12-16.json"
+    topbit = "[\n"
+    with uopen(wilderness_fixture, "w+") as outfile:
+        outfile.write(topbit)
+    pkey = 1
+    created = datetime.utcnow().isoformat()[:-7] + "Z"
+    for i, row in nwps_df.iterrows():
+        comma = ",\n"
+        if pkey == 1:
+            comma = ""
+        pkey = pkey + 1
+        fields = (
+            '{\n        "geom": "'
+            + str(row["geom"])
+            + '",\n        "name": "'
+            + str(row["name"])
+            + '",\n        "slug": "'
+            + str(row["slug"])
+            + '",\n        "agency": "'
+            + row["agency"]
+            + '",\n        "comment": "'
+            + str(row["comment"])
+            + '",\n        "state": "'
+            + str(row["state"])
+            + '",\n        "description": "'
+            + str(row["description"])
+            + '",\n        "designation_date": '
+            + row["designation_date"]
+            + ',\n        "delist_date": '
+            + row["delist_date"]
+            + ',\n        "remarks": '
+            + row["remarks"]
+            + ',\n        "acreage": '
+            + str(row["acreage"])
+            + ',\n        "created": "'
+            + str(created)
+            + '",\n        "modified": null,\n        "author": '
+            + str(row["author"])
+            + "\n    }\n"
+        )
+        record = (
+            comma
+            + '{\n    "model": "wcmd.wilderness_area",\n    "pk": '
+            + str(pkey)
+            + ',\n    "fields": '
+            + fields
+            + "}"
+        )
+        with uopen(wilderness_fixture, "a") as outfile:
+            outfile.write(record)
+    endbit = "\n]"
+    with uopen(wilderness_fixture, "a") as outfile:
+        outfile.write(endbit)
+    log(None, None, "GREEN", wilderness_fixture + " fixture written")
+

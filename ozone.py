@@ -10,7 +10,7 @@ from utils import *
 ozone_dir = data_dir + "_ozone" + slash  # ozone conc_by_monitor files
 
 
-def get_ozone_rev(rev_date):
+def get_ozone_rev(rev_date) -> str:
     rev_datetime = datetime.strptime(rev_date, "%Y-%m-%d")
     dfs = [
         os.path.join(root, name)
@@ -178,7 +178,7 @@ def ozone_nwps(which_wilderness):
     awilderness = awilderness.to_crs(cust_epsg)
     print(awilderness.crs)
 
-    o_crs = "EPSG:4369"
+    o_crs = "EPSG:4269"
     awilderness_10mi = awilderness.copy()
     buffer_length_in_meters = (10 * 1000) * 1.60934  # mi * 1000 * 1.60934
     awilderness_10mi["geometry"] = awilderness_10mi.geometry.buffer(
@@ -212,7 +212,7 @@ def ozone_nwps(which_wilderness):
     log(slug_wilderness, slug_agency, "GREEN", str(awilderness_50mi_file) + " created")
 
     plots = geopandas.read_file(cache_dir + "ozone_data.shp")
-    plots2 = plots.to_crs(awilderness_1mi.crs)
+    plots2 = plots.to_crs(o_crs)
     plots2 = plots2.rename(
         index=str,
         columns={
@@ -270,18 +270,22 @@ def ozone_nwps(which_wilderness):
     )
 
     plots3["geometry"] = geopandas.points_from_xy(plots3.Longitude, plots3.Latitude)  #
-    plots3 = geopandas.GeoDataFrame(plots3, crs=awilderness_50mi.crs)  #
+    plots3 = geopandas.GeoDataFrame(plots3, crs=o_crs)  #
+    #plots3 = geopandas.GeoDataFrame(plots3, crs="EPSG:4326")  #
     # plots3 = plots3.set_crs(epsg="4326")
-    print(plots3.crs)
-    print(awilderness_50mi.crs)
-    print(awilderness_50mi.columns)
-    plots3 = plots3.to_crs(awilderness_50mi.crs)  #
+    #print(plots3.crs)
+    #print(awilderness_50mi.crs)
+    #print(awilderness_50mi.columns)
+    #plots3 = plots3.to_crs(awilderness_50mi.crs)  #
     plots3 = geopandas.sjoin(
         plots3, awilderness_50mi[["name", "geometry"]], how="left", predicate="within"
     )
-    print(plots3.columns)
-    plots3 = plots3[plots3["name_left"].notnull()]
-    print(plots3.crs)
+    #print(plots3.columns)
+    plots3 = plots3[plots3["name_right"].notnull()]
+    #print(plots3.crs)
+    #print(plots3.head)
+    #plots3.to_csv(out_dir + slug_wilderness + "-ozone3.csv", index=False)
+    #quit()
     plots3["tdist"] = 0.0000
     plots3 = plots3.to_crs(awilderness.crs)  #
     for index, row in plots3.iterrows():
@@ -306,14 +310,21 @@ def ozone_nwps(which_wilderness):
         + "-"
         + plots4["name_left"].map(str)[0:40]
     )
+    plots4["stcosite"] = (
+        plots4["state"].map("{:0>2}".format)
+        + ""
+        + plots4["co"].map("{:0>3}".format)
+        + ""
+        + plots4["site"].map("{:0>4}".format)
+    )
     extra_cols = [
         e
         for e in plots4.columns
-        if e not in ["station", "tdist", "t1", "t2", "geometry"]
+        if e not in ["stcosite", "station", "name_left", "tdist", "t1", "t2", "geometry"]
     ]
     plots4 = plots4.drop(columns=extra_cols)
 
-    cols = ["station", "tdist", "t1", "t2", "geometry"]
+    cols = ["station", "stcosite", "name_left", "tdist", "t1", "t2", "geometry"]
     plots4 = plots4[cols]
 
     if not plots4.empty:
@@ -348,7 +359,7 @@ def ozone_nwps(which_wilderness):
         slug_wilderness + " ozone plots projected",
     )
 
-    print(plots4.head)
+    #print(plots4.head)
     plots4.plot(aspect=1)
 
     widths = [13, 27]
@@ -393,9 +404,9 @@ def ozone_nwps(which_wilderness):
         ylim = [awilderness_50mi.total_bounds[1], awilderness_50mi.total_bounds[3]]
 
         if width >= 27:
-            pyplot.suptitle("Ozone Stations near " + which_wilderness[1], fontsize=20)
+            pyplot.suptitle("Ozone Stations near " + which_wilderness[2] + " (" + which_wilderness[1] + ")", fontsize=20)
         else:
-            pyplot.suptitle("Ozone Stations near " + which_wilderness[1])
+            pyplot.suptitle("Ozone Stations near " + which_wilderness[2] + " (" + which_wilderness[1] + ")")
         txt = ""
         axis.annotate(
             txt,
@@ -411,11 +422,33 @@ def ozone_nwps(which_wilderness):
         )
         pyplot.axis("off")
         plots4 = plots4.dropna(subset=["station",])
+        #print(plots4.head)
+        #print(plots4.columns)
+        if plots4.empty:
+            log(
+                slug_wilderness,
+                slug_agency,
+                "RED",
+                slug_wilderness + " no near ozone stations",
+            )
+        else:
+            near_station = plots4.loc[plots4["tdist"].idxmin()]["station"]
+            near_plot = plots4.loc[plots4['station'].isin([near_station])]
+            #print(near_plot.head)
+            #quit()
+            near_plot.plot(
+                ax=axis,
+                color="none",
+                edgecolor="green",
+                linewidth=2,
+                alpha=1.0,
+                aspect=1,
+            )
         texts = []
-        for x, y, station, tdist, t1, t2 in zip(
+        for x, y, stcosite, tdist, t1, t2 in zip(
             plots4.geometry.x,
             plots4.geometry.y,
-            plots4.station,
+            plots4.stcosite,
             plots4.tdist,
             plots4.t1,
             plots4.t2,
@@ -424,7 +457,7 @@ def ozone_nwps(which_wilderness):
                 pyplot.text(
                     x,
                     y,
-                    station + "\nd: " + str(tdist) + "\n" + str(t1) + "-" + str(t2),
+                    str(stcosite) + "\nd: " + d_formatter(tdist) + "\n" + str(t1) + "-" + str(t2),
                 )
             )
         adjust_text(texts)
@@ -450,7 +483,7 @@ def ozone_nwps(which_wilderness):
             "GREEN",
             slug_wilderness + "-ozone-stations-" + str(width) + "in" + ".png created",
         )
-        try_add_basemap(slug_wilderness, slug_agency, axis, awilderness.crs)
+        try_add_basemap(awilderness_box.total_bounds, slug_wilderness, slug_agency, axis, awilderness.crs)
         awilderness_10mi_ring.plot(
             ax=axis, color="none", edgecolor="black", linewidth=1.5, alpha=0.5
         )
@@ -484,7 +517,7 @@ def ozone_nwps(which_wilderness):
         pyplot.close()
 
 
-def ozone_trendplots_multi_nwps(which_wilderness, best_station):
+def ozone_trendplots_multi_nwps(which_wilderness):
     """ make trend plots, find near station """
     slug_wilderness = slugify(which_wilderness[2])
     slug_agency = slugify(which_wilderness[1])
@@ -537,6 +570,7 @@ def ozone_trendplots_multi_nwps(which_wilderness, best_station):
                 "state",
                 "co",
                 "site",
+                "name",
                 "Latitude",
                 "Longitude",
                 "4th Max Value",
@@ -548,7 +582,7 @@ def ozone_trendplots_multi_nwps(which_wilderness, best_station):
         extra_cols = [
             e
             for e in plots_in.columns
-            if e not in ["station", "t1", "t2", "tdist", "geometry", "stcosite"]
+            if e not in ["name_", "t1", "t2", "tdist", "geometry", "stcosite"]
         ]
         plots_in = plots_in.drop(columns=extra_cols)
 
@@ -558,11 +592,16 @@ def ozone_trendplots_multi_nwps(which_wilderness, best_station):
 
         plots_in = pandas.read_csv(out_dir + slug_wilderness + "-inside.csv")
 
+        print(oplots.columns)
+
+
         awilderness = geopandas.read_file(out_dir + awilderness_file)
         dy = awilderness.dd[0][0:4]
         for index, plot in oplots.iterrows():
+            fig1 = pyplot.figure()
             plot = dict(plot)
-            site = plot["station"]
+            stcosite = plot["stcosite"]
+            name = plot["name"]
             xlist = plot["years"]
             ylist = plot["4th Max Value"]
             xlist = xlist.replace("[", "").replace("]", "").replace(" ", "").split(",")
@@ -580,7 +619,7 @@ def ozone_trendplots_multi_nwps(which_wilderness, best_station):
                     slug_wilderness,
                     slug_agency,
                     "RED",
-                    slug_wilderness + " record too short at " + str(site),
+                    slug_wilderness + " record too short at " + str(stcosite),
                 )
             else:
                 del xlist[:2]
@@ -636,30 +675,36 @@ def ozone_trendplots_multi_nwps(which_wilderness, best_station):
                 df["raw_y"] = y_vals
                 cols = pandas.merge(df, cols, on="years_x", how="outer")
 
+                arg1 = ["tab:blue", "tab:red", 0.0, 1.0, 2, "."]
+                arg2 = ["tab:blue", "tab:gray", 0.5, 1.0, 2, "x"]
+
+                #arg1 = ["tab:red", "tab:red", 0.5, 1.0, 1, "."]
+                #arg2 = ["tab:gray", "tab:gray", 0.5, 1.0, 1, "x"]
+
                 cols_to_plot2(
                     cols["years_x"],
                     cols["observations_y"],
                     cols["o_predicted_y"],
-                    ["tab:blue", "tab:red", 0.0, 1.0, 2, "."],
+                    arg1,
                     13,
                 )
                 cols_to_plot2(
                     cols["years_x"],
                     cols["raw_y"],
                     cols["o_predicted_y"],
-                    ["tab:blue", "tab:gray", 0.5, 1.0, 2, "x"],
+                    arg2,
                     13,
                 )
 
-                site = (
-                    site.replace(" ", "-")
+                name = (
+                    name.replace(" ", "-")
                     .replace("//", "-")
                     .replace("/", "-")
                     .replace("'", "")
                     .replace('"', "")
                 )
                 numpy.savetxt(
-                    out_dir + slug_wilderness + "-ozone-" + site + ".csv",
+                    out_dir + slug_wilderness + "-ozone-" + stcosite + ".csv",
                     cols,
                     delimiter=", ",
                     fmt=["%4.0f", "%.4f", "%.4f", "%.4f"],
@@ -668,6 +713,7 @@ def ozone_trendplots_multi_nwps(which_wilderness, best_station):
                 )
 
                 fig1 = pyplot.gcf()
+                #fig1 = pyplot.figure()
                 width = 13
                 fig1.set_size_inches(width, width / 1.618, forward=True)
                 xmin = min(x_vals)
@@ -683,15 +729,20 @@ def ozone_trendplots_multi_nwps(which_wilderness, best_station):
                         ypred.append(m * x + b)
                     pmax = max(ypred)
                 plotmax = max([pmax, ymax])
+                print('ytop')
                 print(ytop)
+                print('ymax')
                 print(ymax)
+                print('pmax')
                 print(pmax)
+                print('plotmax')
                 print(plotmax)
+                #quit()
                 log(
                     slug_wilderness,
                     slug_agency,
                     "WHITE",
-                    slug_wilderness + " ozone station: " + site,
+                    slug_wilderness + " ozone station: " + stcosite,
                 )
                 if not pandas.isnull(plotmax) and trend_text is not None:
                     ytop = plotmax
@@ -706,16 +757,18 @@ def ozone_trendplots_multi_nwps(which_wilderness, best_station):
                             label.set_visible(False)
 
                     pyplot.suptitle(
-                        which_wilderness[0]
+                        which_wilderness[1]
                         + " "
-                        + which_wilderness[1]
+                        + which_wilderness[2]
                         + "\nOzone Trend from "
                         + year_formatter(xmin)
                         + " to "
                         + year_formatter(xmax)
                         + "\nat "
-                        + site[0:40],
-                        y=0.95,
+                        + stcosite
+                        + "\n"
+                        + name[0:80],
+                        y=0.97,
                     )
                     txt = (
                         "trend = "
@@ -1041,7 +1094,7 @@ def ozone_trendplots_multi_nwps(which_wilderness, best_station):
                         bbox={"facecolor": "white", "edgecolor": "black", "pad": 5.0},
                     )
                     fig1.savefig(
-                        out_dir + slug_wilderness + "-ozone-" + site + "-graph.png"
+                        out_dir + slug_wilderness + "-ozone-" + stcosite + "-graph.png"
                     )
                     ax.set_xlabel("Year")
                     ax.set_ylabel(
@@ -1051,7 +1104,7 @@ def ozone_trendplots_multi_nwps(which_wilderness, best_station):
                         out_dir
                         + slug_wilderness
                         + "-ozone-"
-                        + site
+                        + stcosite
                         + "-graph-labels.png"
                     )
                     fig1.clf()
@@ -1059,7 +1112,7 @@ def ozone_trendplots_multi_nwps(which_wilderness, best_station):
                     pyplot.cla()
                     pyplot.close()
 
-                    near_station = oplots.loc[oplots["tdist"].idxmin()]["station"]
+                    near_station = oplots.loc[oplots["tdist"].idxmin()]["stcosite"]
                     near_station = (
                         near_station.replace(" ", "-")
                         .replace("//", "-")
@@ -1083,18 +1136,21 @@ def ozone_trendplots_multi_nwps(which_wilderness, best_station):
                     elif which_wilderness == "Birkhead Mountains Wilderness":
                         near_station = "0371590021-Rockwell"
 
-                    if best_station:
+                    print(len(which_wilderness))
+                    if len(which_wilderness) == 5:
+                        best_station = which_wilderness[4][0]
                         near_station = best_station
-                    if site == near_station:
+                    if stcosite == near_station:
                         log(
                             slug_wilderness,
                             slug_agency,
                             "GREEN",
-                            str(site) + " as near site",
+                            str(stcosite) + " as near site",
                         )
                         jsd = [
                             {
-                                "site": site,
+                                "stcosite": stcosite,
+                                "name": name,
                                 "yr_min": year_formatter(xmin),
                                 "yr_max": year_formatter(xmax),
                                 "endy": float_formatter(endy),

@@ -324,7 +324,13 @@ def awilderness_boundary_nwps(which_wilderness):
             & (wilderness["a"] == which_wilderness[1])
         )
     ]
-    print(awilderness.head)
+
+    if which_wilderness[2] == "Ellicott Rock":
+        awilderness_fix = geopandas.read_file(data_dir + "_wilderness" + slash + "wilderness-ellicott-rock-fix.geojson")
+        awilderness_fix = awilderness_fix.to_crs(epsg=4269)
+        fixed = geopandas.overlay(awilderness, awilderness_fix, how='union')
+        #awilderness.geometry = awilderness.geometry.dissolve(awilderness_fix.geometry)
+        awilderness = fixed.dissolve()
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
         log(
@@ -587,7 +593,7 @@ def wilderness_maps_nwps(wilderness_list):
         axis.set_ylim(ylim_s)
         pyplot.axis("off")
         fig1 = pyplot.gcf()
-        fig1.suptitle(which_wilderness)
+        fig1.suptitle(which_wilderness[1] + " " + which_wilderness[2])
         pyplot.subplots_adjust(top=0.95, bottom=0, right=1, left=0, hspace=0, wspace=0)
         pyplot.margins(0, 0)
         fig1.savefig(out_dir + slug_wilderness + "-map-s.png")
@@ -613,7 +619,7 @@ def wilderness_maps_nwps(wilderness_list):
         awilderness.plot(
             ax=axis, color="none", edgecolor="black", linewidth=1.0, alpha=0.9
         )
-        fig1.suptitle(which_wilderness)
+        fig1.suptitle(which_wilderness[1] + " " + which_wilderness[2])
         fig1.savefig(out_dir + slug_wilderness + "-map-sf.png")
         log(
             slug_wilderness,
@@ -655,7 +661,7 @@ def wilderness_maps_nwps(wilderness_list):
         axis.set_ylim(ylim_w)
         pyplot.axis("off")
         fig1 = pyplot.gcf()
-        fig1.suptitle(which_wilderness)
+        fig1.suptitle(which_wilderness[1] + " " + which_wilderness[2])
         pyplot.subplots_adjust(top=0.95, bottom=0, right=1, left=0, hspace=0, wspace=0)
         pyplot.margins(0, 0)
         fig1.savefig(out_dir + slug_wilderness + "-mapw-s.png")
@@ -680,7 +686,7 @@ def wilderness_maps_nwps(wilderness_list):
         awilderness.plot(
             ax=axis, color="none", edgecolor="black", linewidth=1.0, alpha=0.9
         )
-        fig1.suptitle(which_wilderness)
+        fig1.suptitle(which_wilderness[1] + " " + which_wilderness[2])
         fig1.savefig(out_dir + slug_wilderness + "-mapw-sf.png")
         log(
             slug_wilderness,
@@ -702,7 +708,7 @@ def wilderness_maps_nwps(wilderness_list):
         axis.set_ylim(ylim2)
         # print(awilderness.crs) # 4269
         # quit()
-        try_add_basemap(slug_wilderness, slug_agency, axis, awilderness.crs.to_string())
+        try_add_basemap(awilderness_box.total_bounds, slug_wilderness, slug_agency, axis, awilderness.crs.to_string())
         awilderness.plot(
             ax=axis, color="none", edgecolor="black", linewidth=1.0, alpha=0.9
         )
@@ -730,16 +736,12 @@ def awilderness_station_buffers(which_wilderness, station_list):
     slug_wilderness = slugify(which_wilderness)
     out_dir = base_dir + slug_wilderness + slash
     awilderness_file = slug_wilderness + "." + out_ext
-    awilderness_1mi_file = slug_wilderness + "-stations-buffer." + out_ext
-    awilderness_1mi_ring_file = slug_wilderness + "-stations-ring." + out_ext
 
     awilderness = geopandas.read_file(out_dir + awilderness_file)
-    awilderness_1mi = awilderness.copy()
     ga = awilderness.GIS_ACRES.values[0]
     print(ga)
     g_meters = ga * 4046.856
     print(g_meters)
-    import math
 
     r_meters = math.sqrt(g_meters / math.pi)
     print(r_meters)

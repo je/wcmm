@@ -2,6 +2,7 @@
 
 import itertools
 import os
+import json
 from datetime import datetime
 
 import geopandas
@@ -27,7 +28,8 @@ from settings import (
 from utils import cols_to_plot, log, try_add_basemap, trender, uopen
 
 # lichen_xlsx = data_dir + '_lichen' + slash + 'MegaDbPLOT_2022.05.13.xlsx'
-lichen_xlsx = data_dir + "_lichen" + slash + "MegaDbPLOT_2022.10.06.xlsx"
+# lichen_xlsx = data_dir + "_lichen" + slash + "MegaDbPLOT_2022.10.06.xlsx"
+lichen_xlsx = data_dir + "_lichen" + slash + "2024-01-03" + slash + "MegaDbPLOT_2023.10.07.xlsx"
 
 
 def lichen_match():
@@ -35,7 +37,7 @@ def lichen_match():
     """
     lichen_xls = lichen_xlsx
     out_dir = base_dir
-    stations = pandas.read_excel(uopen(lichen_xls, "rb"), sheet_name="Full PlotDB")
+    stations = pandas.read_excel(open(lichen_xls, "rb"), sheet_name="Full PlotDB")
     extra_cols = [
         e
         for e in stations.columns
@@ -63,6 +65,14 @@ def lichen_match():
     print(str(len(stations)) + " with defined s_airscore")
     stations["n_airscore"] = pandas.to_numeric(stations["n_airscore"])
     stations["s_airscore"] = pandas.to_numeric(stations["s_airscore"])
+
+    stations['longusedd'] = stations.apply(lambda r: r['longusedd'] if type(r['longusedd'])==float else numpy.nan, axis=1)
+    stations['latusedd'] = stations.apply(lambda r: r['latusedd'] if type(r['latusedd'])==float else numpy.nan, axis=1)
+    print(str(len(stations)) + " before coords")
+    stations = stations[~stations["longusedd"].isna()]
+    stations = stations[~stations["latusedd"].isna()]
+    print(str(len(stations)) + " with coords")
+
     s = (
         stations.groupby(["roundno", "year", "plot", "match_to", "wilderns"])
         .agg(d)
@@ -148,8 +158,8 @@ def lichen_match():
 def lichen_plot_map(which_wilderness):
     lichen_xls = lichen_xlsx  # todo: use airscores.csv from lichen_match instead
 
-    slug_wilderness = slugify(which_wilderness[1])
-    slug_agency = slugify(which_wilderness[0])
+    slug_wilderness = slugify(which_wilderness[2])
+    slug_agency = slugify(which_wilderness[1])
     out_dir = base_dir + slug_agency + slash + slug_wilderness + slash
 
     awilderness_file = slug_wilderness + "." + out_ext
@@ -161,10 +171,78 @@ def lichen_plot_map(which_wilderness):
     awilderness = geopandas.read_file(out_dir + awilderness_file)
     awilderness_1mi = geopandas.read_file(out_dir + awilderness_1mi_file)
     wilderness_designation_year = awilderness["dd"].iloc[0][0:4]
-    stations = pandas.read_excel(uopen(lichen_xls, "rb"), sheet_name="Full PlotDB")
-    station = stations[
-        stations["wilderns"] == (which_wilderness[1] + " Wilderness")
-    ].copy(deep=True)
+
+    airscores = pandas.read_excel(open(lichen_xls, "rb"), sheet_name="Full PlotDB")
+    #print(airscores.head)
+    airscores = airscores.dropna(subset=["longusedd", "latusedd"])
+    #print(airscores.head)
+    airscores = airscores[~(airscores["longusedd"].isin([" ", ]) | airscores["latusedd"].isin([" ", ]))]
+    #airscores = airscores[(airscores["longusedd"].isin([" ", ]) | airscores["latusedd"].isin([" ", ]))]
+    #airscores = airscores[~airscores["longusedd"] == (" ")].copy(deep=True)
+    #print(airscores.head)
+    #quit()
+
+    dbcols = [
+        "plot",
+        "geometry",
+        "s_airscore",
+        "s_airscore_clim_adj",
+        "n_airscore",
+        "n_airscore_clim_adj",
+        "id",
+        "megadbid",
+        "plot_use",
+        "plot",
+        "match_to",
+        "HexID_or_FIAdb",
+        "visitno",
+        "year",
+        "roundno",
+        "date",
+        "nfs_reg",
+        "nfsregad",
+        "fia_reg",
+        "dataset1",
+        "dataset2",
+        "wilderns",
+        "class",
+        "InWilderness",
+        "WithinHalfMile",
+        "Within1Mile",
+        "latusedd",
+        "longusedd",
+        "latuseNAD83",
+        "longuseNAD83",
+        "progspon",
+        "protocol",
+        "publicat",
+        "fia_prot",
+        "plottype",
+        "devsop",
+        "project",
+    ]
+    extra_cols = [e for e in airscores.columns if e not in dbcols]
+    airscores = airscores.drop(columns=extra_cols)
+    airscores["date"] = airscores["date"].astype(str)
+    airscores["geometry"] = geopandas.points_from_xy(
+        airscores.longusedd, airscores.latusedd
+    )  #
+
+    # w_airscores = airscores[airscores["wilderns"] == (which_wilderness[1] + " Wilderness")].copy(deep=True)
+
+    # airscores["geometry"] = geopandas.points_from_xy(airscores.longuseNAD83, airscores.latuseNAD83)  #
+    airscores = geopandas.GeoDataFrame(airscores, crs=awilderness_1mi.crs)  #
+    airscores = geopandas.sjoin(
+        airscores, awilderness_1mi[["name", "geometry"]], how="left", predicate="within"
+    )
+
+    within = airscores["name"].notnull()
+    tagged = airscores["wilderns"] == (which_wilderness[2] + " Wilderness")
+    scores = airscores[within | tagged]
+    print(scores.head)
+
+    stations = pandas.read_excel(open(lichen_xls, "rb"), sheet_name="Full PlotDB")
+    station = scores.copy(deep=True)
     extra_cols = [
         e
         for e in station.columns
@@ -208,7 +286,9 @@ def lichen_plot_map(which_wilderness):
         for e in station.columns
         if e not in ["roundno", "plot_id", "n_airscore", "s_airscore"]
     ]
-    s = station.groupby(["roundno", "plot_id",]).mean().add_suffix("_avg").reset_index()
+    #station_ = station.drop(columns=extra_cols)
+    #print(station_.head)
+    #s = station_.groupby(["roundno", "plot_id",]).mean().add_suffix("_avg").reset_index()
     d = {"n_airscore": ["mean"], "s_airscore": ["mean"]}
     station["n_airscore"] = pandas.to_numeric(station["n_airscore"])
     station["s_airscore"] = pandas.to_numeric(station["s_airscore"])
@@ -300,7 +380,7 @@ def lichen_plot_map(which_wilderness):
         plots.plot(ax=axis, color="tab:cyan", edgecolor="tab:cyan", alpha=1)
         xlim = [awilderness_1mi.total_bounds[0], awilderness_1mi.total_bounds[2]]
         ylim = [awilderness_1mi.total_bounds[1], awilderness_1mi.total_bounds[3]]
-        pyplot.suptitle("Lichen plot locations near " + which_wilderness[1])
+        pyplot.suptitle("Lichen plot locations near " + which_wilderness[2])
         axis.set_xlim(xlim)
         axis.set_ylim(ylim)
         pyplot.axis("off")
@@ -329,7 +409,7 @@ def lichen_plot_map(which_wilderness):
         # contextily.add_basemap(axis, crs='EPSG:4326')
         # contextily.add_basemap(axis, crs=awilderness.crs.to_string(), zoom=10, source=contextily.providers.Stamen.TonerLite)
         # try_add_basemap(slug_wilderness, axis, awilderness.crs)
-        try_add_basemap(slug_wilderness, slug_agency, axis, awilderness.crs.to_string())
+        try_add_basemap(awilderness_box.total_bounds, slug_wilderness, slug_agency, axis, awilderness.crs.to_string())
         awilderness.plot(
             ax=axis, color="none", edgecolor="black", linewidth=1.0, alpha=0.9
         )
@@ -353,8 +433,8 @@ def lichen_rounds(which_wilderness):
     """ read airscores.csv, make trend plots """
     lichen_xls = lichen_xlsx  # todo: use airscores.csv from lichen_match instead
 
-    slug_wilderness = slugify(which_wilderness[1])
-    slug_agency = slugify(which_wilderness[0])
+    slug_wilderness = slugify(which_wilderness[2])
+    slug_agency = slugify(which_wilderness[1])
     out_dir = base_dir + slug_agency + slash + slug_wilderness + slash
 
     awilderness_file = slug_wilderness + "." + out_ext
@@ -367,7 +447,16 @@ def lichen_rounds(which_wilderness):
     awilderness_1mi = geopandas.read_file(out_dir + awilderness_1mi_file)
     wilderness_designation_year = awilderness["dd"].iloc[0][0:4]
 
-    airscores = pandas.read_excel(uopen(lichen_xls, "rb"), sheet_name="Full PlotDB")
+    airscores = pandas.read_excel(open(lichen_xls, "rb"), sheet_name="Full PlotDB")
+    #print(airscores.head)
+    airscores = airscores.dropna(subset=["longusedd", "latusedd"])
+    #print(airscores.head)
+    airscores = airscores[~(airscores["longusedd"].isin([" ", ]) | airscores["latusedd"].isin([" ", ]))]
+    #airscores = airscores[(airscores["longusedd"].isin([" ", ]) | airscores["latusedd"].isin([" ", ]))]
+    #airscores = airscores[~airscores["longusedd"] == (" ")].copy(deep=True)
+    #print(airscores.head)
+    #quit()
+
     dbcols = [
         "plot",
         "geometry",
@@ -423,7 +512,7 @@ def lichen_rounds(which_wilderness):
     )
 
     within = airscores["name"].notnull()
-    tagged = airscores["wilderns"] == (which_wilderness[1] + " Wilderness")
+    tagged = airscores["wilderns"] == (which_wilderness[2] + " Wilderness")
     scores = airscores[within | tagged]
     print(scores.head)
 
@@ -431,9 +520,9 @@ def lichen_rounds(which_wilderness):
     scores.to_file(
         driver="GeoJSON", filename=out_dir + slug_wilderness + "-lichen.json",
     )
-    quit()
+    #quit()
 
-    # plots = pandas.read_excel(uopen(lichen_xls, 'rb'), sheet_name='Full PlotDB')
+    # plots = pandas.read_excel(open(lichen_xls, 'rb'), sheet_name='Full PlotDB')
     # w_plots = plots[plots['wilderns'] == which_wilderness].copy(deep=True)
     # extra_cols = [e for e in w_plots.columns if e not in ['plot', 'match_to', 'wilderns',
     #    'dataset1', 'year', 'roundno', 'n_airscore', 's_airscore', 'c',
@@ -441,7 +530,7 @@ def lichen_rounds(which_wilderness):
     # w_plots = w_plots.drop(columns=extra_cols)
 
     d = {"n_airscore": ["mean"], "s_airscore": ["mean"]}
-    df = w_airscores.groupby(["plot", "roundno", "year"]).agg(d).reset_index()
+    df = scores.groupby(["plot", "roundno", "year"]).agg(d).reset_index()
     df.columns = df.columns.map(lambda x: "_".join(a for a in x if len(a) > 0))
 
     if df.empty:
@@ -465,9 +554,9 @@ def lichen_rounds(which_wilderness):
             # pyplot.close()
 
             dfns = df.copy()
+            dfns = dfns[dfns["year"] > int(wilderness_designation_year)]
             keeps = ["plot", "roundno", "year", ns + "_airscore_mean", "roundy"]
             dfns = dfns[keeps]
-            print(dfns.head)
             dfns = dfns[~dfns[ns + "_airscore_mean"].isnull()]
             print(dfns.head)
 
@@ -490,7 +579,7 @@ def lichen_rounds(which_wilderness):
                 pyplot.text(
                     x=0.5,
                     y=0.96,
-                    s=which_wilderness,
+                    s=which_wilderness[2],
                     fontsize=10,
                     ha="center",
                     transform=fig1.transFigure,
@@ -560,7 +649,7 @@ def lichen_rounds(which_wilderness):
                 pyplot.text(
                     x=0.5,
                     y=0.96,
-                    s=which_wilderness,
+                    s=which_wilderness[2],
                     fontsize=10,
                     ha="center",
                     transform=fig1.transFigure,
@@ -672,7 +761,7 @@ def lichen_rounds(which_wilderness):
                 pyplot.text(
                     x=0.5,
                     y=0.96,
-                    s=which_wilderness,
+                    s=which_wilderness[2],
                     fontsize=10,
                     ha="center",
                     transform=fig1.transFigure,
@@ -696,9 +785,12 @@ def lichen_rounds(which_wilderness):
                 pyplot.close()
 
                 dfns = df.copy()
-                dfns = dfns[
-                    dfns["year"] > int(wilderness_designation_year)
-                ]  # per protocol
+                dfns = dfns[dfns["year"] > int(wilderness_designation_year)]
+                keeps = ["plot", "roundno", "year", ns + "_airscore_mean", "roundy"]
+                dfns = dfns[keeps]
+                dfns = dfns[~dfns[ns + "_airscore_mean"].isnull()]
+                print(dfns.head)
+
                 width = 13
                 fig, ax = pyplot.subplots(nrows=1, figsize=(width, width / 1.618))
                 # texts = []
@@ -733,7 +825,7 @@ def lichen_rounds(which_wilderness):
                 pyplot.text(
                     x=0.5,
                     y=0.96,
-                    s=which_wilderness,
+                    s=which_wilderness[2],
                     fontsize=10,
                     ha="center",
                     transform=fig1.transFigure,
@@ -767,9 +859,17 @@ def lichen_rounds(which_wilderness):
 
                 dfns = df.copy()
                 dfns = dfns[dfns["year"] > int(wilderness_designation_year)]
+                keeps = ["plot", "roundno", "year", ns + "_airscore_mean", "roundy"]
+                dfns = dfns[keeps]
+                dfns = dfns[~dfns[ns + "_airscore_mean"].isnull()]
+                print(dfns.head)
+
                 pair_list = list(itertools.combinations(rounds_list, 2))
                 with uopen(out_dir + slug_wilderness + "-lichen-" + ns + ".txt", "w"):
                     os.utime(out_dir + slug_wilderness + "-lichen-" + ns + ".txt", None)
+                with uopen(out_dir + slug_wilderness + "-lichen-" + ns + ".json", "w"):
+                    os.utime(out_dir + slug_wilderness + "-lichen-" + ns + ".json", None)
+                jscd = []
                 for pair in pair_list:
                     first_round = pair[0]
                     last_round = pair[1]
@@ -830,7 +930,7 @@ def lichen_rounds(which_wilderness):
                                 + "\n"
                             )
                         ns, trend, p_value = trend_round(
-                            which_wilderness,
+                            which_wilderness[2],
                             ns,
                             por,
                             wilderness_designation_year,
@@ -850,6 +950,21 @@ def lichen_rounds(which_wilderness):
                             out_dir + slug_wilderness + "-lichen-" + ns + ".txt", "a"
                         ) as text_file:
                             print(f"{txt}", file=text_file)
+
+                        jsd = [
+                            {
+                                "airscore": ns,
+                                "first_round": first_round,
+                                "first_scores": a_list,
+                                "last_round": last_round,
+                                "last_scores": b_list,
+                                "trend": trend,
+                                "p": p_formatter(p_value),
+                            }
+                        ]
+                        jsc = "".join(str(v) for v in jsd).replace("'", '"')
+
+                        jscd = jscd + jsd
 
                         width = 13
                         fig, ax = pyplot.subplots(
@@ -895,7 +1010,7 @@ def lichen_rounds(which_wilderness):
                         pyplot.text(
                             x=0.5,
                             y=0.96,
-                            s=which_wilderness,
+                            s=which_wilderness[2],
                             fontsize=10,
                             ha="center",
                             transform=fig1.transFigure,
@@ -949,6 +1064,12 @@ def lichen_rounds(which_wilderness):
                         pyplot.clf()
                         pyplot.cla()
                         pyplot.close()
+
+                print(jscd)
+                #jscc = "".join(str(v) for v in jscd).replace("'", '"')
+                jscc = json.dumps(jscd)
+                with uopen(out_dir + slug_wilderness + "-lichen-" + ns + ".json", "a") as static_file:
+                    static_file.write(jscc)
 
 
 def trend_round(which_wilderness, ns, por, wilderness_designation_year, a_list, b_list):

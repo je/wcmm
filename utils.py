@@ -10,10 +10,8 @@ import scipy
 import shapely.geometry
 import statsmodels.api as sm
 from matplotlib import pyplot  # , colors
-from osgeo import osr, ogr
 from sklearn import linear_model
 from pylint import lint
-from pylint.reporters.text import TextReporter
 
 from settings import *
 
@@ -275,8 +273,8 @@ def trend2(x_list, y_list, cca):
         print(p_value_)  # 0.7510488092136175
         print(trend_text)
         print(trend_text_)
-        print(cols)
-        print(cols_)
+        #print(cols)
+        #print(cols_)
         # quit()
 
         pyplot.plot(years, y_lr, color=cca[0], alpha=cca[2], linewidth=2, label=None)
@@ -895,84 +893,50 @@ def try_add_basemap_(slug_wilderness, axis, crs):
     log(slug_wilderness, None, "ORANGE", slug_wilderness + " basemap skipped")
 
 
-def try_add_basemap(slug_wilderness, slug_agency, axis, crs):  ## too slow
+def try_add_basemap(bounds, slug_wilderness, slug_agency, axis, crs):  ## too slow
     crs_epsg = str(crs)
+    t14 = contextily.howmany(bounds[0], bounds[1], bounds[2], bounds[3], 14, ll=True)
+    t13 = contextily.howmany(bounds[0], bounds[1], bounds[2], bounds[3], 13, ll=True)
+    t12 = contextily.howmany(bounds[0], bounds[1], bounds[2], bounds[3], 12, ll=True)
+    t11 = contextily.howmany(bounds[0], bounds[1], bounds[2], bounds[3], 11, ll=True)
+    t10 = contextily.howmany(bounds[0], bounds[1], bounds[2], bounds[3], 10, ll=True)
+
+    if t14 <= 400:
+        z = 14
+        tc = t14
+    elif t13 <= 400:        
+        z = 13
+        tc = t13
+    elif t12 <= 400:        
+        z = 12
+        tc = t12
+    elif t11 <= 400:        
+        z = 11
+        tc = t11
+    elif t10 <= 400:        
+        z = 10
+        tc = t10
     log(
         slug_wilderness,
         slug_agency,
         "WHITE",
-        slug_wilderness + " adding terrain basemap " + crs_epsg,
+        slug_wilderness + " adding terrain basemap " + str(tc) + " tiles (zoom=" + str(z) + ", crs=" + crs_epsg + ")",
     )
     try:
-        contextily.add_basemap(axis, zoom=14, crs=crs)
+        contextily.add_basemap(axis, zoom=z, crs=crs)
         log(
             slug_wilderness,
             slug_agency,
             "CYAN",
-            slug_wilderness + " basemap added at zoom 14",
+            slug_wilderness + " basemap added at zoom " + str(z),
         )
     except:
-        log(slug_wilderness, slug_agency, "WHITE", slug_wilderness + " trying zoom 13")
-        try:
-            contextily.add_basemap(axis, zoom=13, crs=crs)
-            log(
-                slug_wilderness,
-                slug_agency,
-                "CYAN",
-                slug_wilderness + " basemap added at zoom 13",
-            )
-        except:
-            log(
-                slug_wilderness,
-                slug_agency,
-                "WHITE",
-                slug_wilderness + " trying zoom 12",
-            )
-            try:
-                contextily.add_basemap(axis, zoom=12, crs=crs)
-                log(
-                    slug_wilderness,
-                    slug_agency,
-                    "CYAN",
-                    slug_wilderness + " basemap added at zoom 12",
-                )
-            except:
-                log(
-                    slug_wilderness,
-                    slug_agency,
-                    "WHITE",
-                    slug_wilderness + " trying zoom 11",
-                )
-                try:
-                    contextily.add_basemap(axis, zoom=11, crs=crs)
-                    log(
-                        slug_wilderness,
-                        slug_agency,
-                        "CYAN",
-                        slug_wilderness + " basemap added at zoom 11",
-                    )
-                except:
-                    log(
-                        slug_wilderness,
-                        slug_agency,
-                        "WHITE",
-                        slug_wilderness + " trying zoom 10",
-                    )
-                    try:
-                        contextily.add_basemap(axis, zoom=10, crs=crs)
-                        log(
-                            slug_wilderness,
-                            slug_agency,
-                            "CYAN",
-                            slug_wilderness + " basemap added at zoom 10",
-                        )
-                    except:
-                        log(
-                            slug_wilderness,
-                            slug_agency,
-                            "RED",
-                            slug_wilderness + " basemap fail",
-                        )
+        log(
+            slug_wilderness,
+            slug_agency,
+            "RED",
+            slug_wilderness + " basemap fail at zoom" + str(z),
+        )
 
 
 # from shapely.geometry.polygon import Polygon
@@ -1118,7 +1082,6 @@ def trender(years_x, observations_y):
     cols = numpy.column_stack([cols, yt_pred])
 
     X = x
-    y = y
 
     X2 = sm.add_constant(X)
     est = sm.OLS(y, X2)
@@ -1177,7 +1140,7 @@ def trender(years_x, observations_y):
     print(p_value_)
     # print(trend_text)
     print(trend_text_)
-    print(cols)
+    #print(cols)
     # print(cols_)
     # quit()
     # print(trend_text)
@@ -1188,7 +1151,6 @@ def trender(years_x, observations_y):
 
 
 def cols_to_plot(years_x, observations_y, predicted_y, ccaa, width):
-    width = width
     pyplot.scatter(
         years_x, observations_y, color=ccaa[1], alpha=ccaa[3], marker="x", s=40
     )
@@ -1197,21 +1159,32 @@ def cols_to_plot(years_x, observations_y, predicted_y, ccaa, width):
     )
 
 
+arg1 = ["tab:red", "tab:red", 0.5, 1.0, 1, "."]
+arg2 = ["tab:gray", "tab:gray", 0.5, 1.0, 1, "x"]
+
 def cols_to_plot2(years_x, observations_y, predicted_y, ccaalm, width):
-    width = width
-    pyplot.scatter(
+    pyplot.plot(
         years_x,
         observations_y,
         color=ccaalm[1],
-        alpha=ccaalm[3],
-        marker=ccaalm[5],
+        alpha=0.5,
+        linewidth=ccaalm[4],
+        linestyle=(0,(2,2)),
+        label=None,
+    )
+    pyplot.scatter(
+        years_x,
+        observations_y,
+        color=ccaalm[1],  # red
+        alpha=ccaalm[3],  # 1.0
+        marker=ccaalm[5], # .
         s=40,
     )
     pyplot.plot(
         years_x,
         predicted_y,
-        color=ccaalm[0],
-        alpha=ccaalm[2],
-        linewidth=ccaalm[4],
+        color=ccaalm[0],     # blue
+        alpha=ccaalm[2],     # 0.0
+        linewidth=ccaalm[4], # 2
         label=None,
     )

@@ -1,8 +1,6 @@
 """ Water. """
 
 import json
-import shutil
-
 import geopandas
 import pandas
 import requests
@@ -223,9 +221,9 @@ def watershed_conditions_nwps(water_list):
                 ]
                 pyplot.suptitle(
                     "Watershed condition class in "
-                    + slug_agency
+                    + which_wilderness[1]
                     + " "
-                    + slug_wilderness
+                    + which_wilderness[2]
                 )
                 txt = (
                     str(w_ac)
@@ -283,7 +281,7 @@ def watershed_conditions_nwps(water_list):
                 awilderness_box["geometry"] = awilderness_box.geometry.envelope
                 fill = colors.colorConverter.to_rgba("tab:brown", alpha=0.1)
                 try_add_basemap(
-                    slug_wilderness, slug_agency, axis, awilderness.crs.to_string()
+                    awilderness_box.total_bounds, slug_wilderness, slug_agency, axis, awilderness.crs.to_string()
                 )
                 awilderness.plot(
                     ax=axis, color="none", edgecolor="black", linewidth=1.0, alpha=0.9
@@ -1231,7 +1229,7 @@ def attains_waters_nwps(water_list, rev_date):
         ylim2 = [awilderness_box.total_bounds[1], awilderness_box.total_bounds[3]]
         axis.set_xlim(xlim2)
         axis.set_ylim(ylim2)
-        try_add_basemap(slug_wilderness, slug_agency, axis, awilderness.crs.to_string())
+        try_add_basemap(awilderness_box.total_bounds, slug_wilderness, slug_agency, axis, awilderness.crs.to_string())
         awilderness.plot(
             ax=axis, color="none", edgecolor="black", linewidth=1.0, alpha=0.9
         )
@@ -1330,7 +1328,7 @@ def attains_waters_nwps(water_list, rev_date):
         ylim2 = [awilderness_box.total_bounds[1], awilderness_box.total_bounds[3]]
         axis.set_xlim(xlim2)
         axis.set_ylim(ylim2)
-        try_add_basemap(slug_wilderness, slug_agency, axis, awilderness.crs.to_string())
+        try_add_basemap(awilderness_box.total_bounds, slug_wilderness, slug_agency, axis, awilderness.crs.to_string())
         awilderness.plot(
             ax=axis, color="none", edgecolor="black", linewidth=1.0, alpha=0.9
         )
@@ -1413,7 +1411,7 @@ def attains_waters_nwps(water_list, rev_date):
         ylim2 = [awilderness_box.total_bounds[1], awilderness_box.total_bounds[3]]
         axis.set_xlim(xlim2)
         axis.set_ylim(ylim2)
-        try_add_basemap(slug_wilderness, slug_agency, axis, awilderness.crs.to_string())
+        try_add_basemap(awilderness_box.total_bounds, slug_wilderness, slug_agency, axis, awilderness.crs.to_string())
         awilderness.plot(
             ax=axis, color="none", edgecolor="black", linewidth=1.0, alpha=0.9
         )
